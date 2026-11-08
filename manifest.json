@@ -1,7 +1,7 @@
 {
   "id": "./index.html",
-  "name": "語言學習",
-  "short_name": "語言學習",
+  "name": "Vocablearn",
+  "short_name": "Vocablearn",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
