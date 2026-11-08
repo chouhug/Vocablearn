@@ -4,7 +4,7 @@
 
 ## 專案是什麼
 
-- 原本是日語 N5 學習 PWA（GitHub：`chouhug/N5`，用 GitHub Pages 發布），現在擴充成多語言學習 App，名稱「語言學習」。
+- 原本是日語 N5 學習 PWA（GitHub：`chouhug/Vocablearn`，用 GitHub Pages 發布），現在擴充成多語言學習 App，名稱「語言學習」。
 - 已完成的語言：**日語 N5**（index.html）、**義大利文 A1**（it.html）、**西班牙文 A1**（es.html）、**德文 A1**（de.html）、**俄文 A1**（ru.html）、**英文 B2**（en.html）。
 - 選單裡的語言全部都能用了。
 - 介面是繁體中文，外觀、音效、震動、每輪題數、單字意思、介面語言這些設定，各語言共用。
@@ -17,7 +17,7 @@
   3. `node n5src/build.js n5work --check`：確認網站上的檔案和原始檔一致（有人直接改了 .html 時會列出來）
   4. 把 n5src 和 n5work 重新打包成 n5-src.zip，連同改過的網站檔案一起 commit。
 - 網站上的檔案全部平放在 repo 根目錄（GitHub Pages）。原始碼在 repo 根目錄的 `n5-src.zip`（使用者用 iPad 的 GitHub 網頁版上傳時不能上傳資料夾，所以原始碼用 zip 放）。
-- 2026-11 起 Claude 可以直接 commit／push 到 `chouhug/N5` 的 main（使用者要求的）；推完要用 `git ls-remote` 確認 main 真的是新的 commit，並看 GitHub Pages 有沒有部署成功。
+- 2026-11 起 Claude 可以直接 commit／push 到 `chouhug/Vocablearn` 的 main（使用者要求的）；推完要用 `git ls-remote` 確認 main 真的是新的 commit，並看 GitHub Pages 有沒有部署成功。
 - **GitHub Actions**（`.github/workflows/site.yml`「檢查並更新網站」）：每次推到 main 都會解開 n5-src.zip、跑 test-all.js、用 n5src/deploy.js 產生頁面並和網站檔案比對：
   - 一樣 → 不動作（Claude 同時改了 zip 和網站檔案時）。
   - 這次有改 zip、網站檔案不一樣 → 把 zip 產生的檔案複製到根目錄、sw.js 快取版本號加一、用 n5src/pack.py 重新打包 zip（中文檔名用 UTF-8）、commit「自動更新網站：…」、請 GitHub Pages 部署。
