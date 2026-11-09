@@ -32,11 +32,11 @@
 |---|---|
 | index.html | 日語 N5 頁（build.js 用 n5src/ja/ 產生，約 430KB），開頭有 `<script src="lang.js" data-lang="ja">` |
 | it.html / es.html / de.html / ru.html / en.html | 由 build.js 產生的義大利文、西班牙文、德文、俄文、英文頁 |
-| lang.js | 所有頁共用：語言選單、語言鎖定（最多幾個語言＋自己寫的理由）、記住上次的語言並自動跳轉、換頁用 location.replace（返回鍵不會跳回上個語言）、鍵盤收起時恢復底部分頁、`html{touch-action:manipulation}`（防止連點放大） |
+| lang.js | 所有頁共用：第一次使用先選語言、語言選單、語言鎖定（最多幾個語言＋自己寫的理由）、記住上次的語言並自動跳轉、換頁用 location.replace（返回鍵不會跳回上個語言）、鍵盤收起時恢復底部分頁、`html{touch-action:manipulation}`（防止連點放大） |
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v89'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v90'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -124,6 +124,8 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **第一次使用先選語言**（lang.js）：全新的使用者（沒有 langs:v1、langs:last、n5:progress）不管打開哪一頁，都會先跳出不能關的「你想學哪個語言？」（`langs:welcome`＝1 表示還沒選，沒選就關掉下次會再問）。選了別的語言就換頁，選目前這頁就關掉面板；`langs:v1` 只開選的那個語言。初次導覽會等選完（`AppLangs.welcome`、`AppLangs.afterWelcome(fn)`，shared/tour.js 的 `Tour.auto()` 用它）。還沒選時日文頁不會自動跳到上次的語言。LANGS 多了 `desc`（選語言時的一句說明）。
 
 - **各語言的初次導覽**：導覽程式從日文頁抽成 n5src/shared/tour.js（日文頁用 `// @include`、語言頁用 `/*@include*/`），各頁不同的地方在 `PAGE.tour`（key、steps()、art、extra／bind、fresh()）。義、西、德、俄、英頁第一次打開（還沒有該語言的紀錄、也沒看過）會跳出 10 步導覽：歡迎、切換語言、發音、字卡、單選、填空、文法、單字庫・設定、上方按鈕、小提示；看過的紀錄存在 `it:toured`、`es:toured`…（日文還是 `n5:toured`），設定的「介面語言」區有「重看使用導覽」。各語言的說明可以在 config.js 用 `tourIntro`、`tourPron`、`tourFill` 覆寫（俄、英改了發音頁說明，各語言的填空寫了拼寫規則）；找不到元素的步驟自動略過（英文頁沒有「名」按鈕）。日文頁導覽多了「切換語言」一步（有英文翻譯），而且改成只看日文的紀錄（以前學過其他語言就不會跳出日文導覽）。
 

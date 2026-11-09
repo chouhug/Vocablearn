@@ -5267,8 +5267,12 @@ const Tour = {
     this.back.hidden = this.ring.hidden = this.card.hidden = true;
     showTab('card');
   },
-  // 啟動時呼叫：沒看過導覽、也還沒有這個語言的紀錄才自動開始
-  auto() { if (!store.get(PAGE.tour.key, 0) && PAGE.tour.fresh()) this.start(0); }
+  // 啟動時呼叫：沒看過導覽、也還沒有這個語言的紀錄才自動開始。
+  // 第一次使用要先選語言（lang.js 的「你想學哪個語言？」），選完留在這一頁才開始
+  auto() {
+    if (window.AppLangs && AppLangs.welcome) return AppLangs.afterWelcome(() => this.auto());
+    if (!store.get(PAGE.tour.key, 0) && PAGE.tour.fresh()) this.start(0);
+  }
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card && !Tour.card.hidden) Tour.end(); });
 

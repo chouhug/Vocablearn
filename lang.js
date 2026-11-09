@@ -7,12 +7,12 @@
   const CUR = (me && me.dataset.lang) || 'ja';
   const ROOT = new URL('.', me ? me.src : location.href).href;   // lang.js 所在的資料夾＝App 根目錄
   const LANGS = [
-    { id: 'ja', name: '日語', sub: 'N5', glyph: 'あ', path: 'index.html', ready: true },
-    { id: 'it', name: '義大利文', sub: 'A1', glyph: 'à', path: 'it.html', ready: true },
-    { id: 'es', name: '西班牙文', sub: 'A1', glyph: 'ñ', path: 'es.html', ready: true },
-    { id: 'de', name: '德文', sub: 'A1', glyph: 'ß', path: 'de.html', ready: true },
-    { id: 'ru', name: '俄文', sub: 'A1', glyph: 'Я', path: 'ru.html', ready: true },
-    { id: 'en', name: '英文', sub: 'B2', glyph: 'Aa', path: 'en.html', ready: true }
+    { id: 'ja', name: '日語', sub: 'N5', glyph: 'あ', path: 'index.html', ready: true, desc: '從五十音開始，學 N5 單字和文法' },
+    { id: 'it', name: '義大利文', sub: 'A1', glyph: 'à', path: 'it.html', ready: true, desc: '入門：字母、發音、基本單字和文法' },
+    { id: 'es', name: '西班牙文', sub: 'A1', glyph: 'ñ', path: 'es.html', ready: true, desc: '入門：字母、發音、基本單字和文法' },
+    { id: 'de', name: '德文', sub: 'A1', glyph: 'ß', path: 'de.html', ready: true, desc: '入門：字母、發音、基本單字和文法' },
+    { id: 'ru', name: '俄文', sub: 'A1', glyph: 'Я', path: 'ru.html', ready: true, desc: '入門：從西里爾字母開始' },
+    { id: 'en', name: '英文', sub: 'B2', glyph: 'Aa', path: 'en.html', ready: true, desc: '給已經 B1 的人：B2 單字和片語' }
   ];
   const BY = Object.fromEntries(LANGS.map(l => [l.id, l]));
   const store = {
@@ -22,6 +22,10 @@
   const ready = LANGS.filter(l => l.ready).map(l => l.id);
   // 第一次用：新使用者只開「現在這個語言」（以前預設日語＋義大利文，朋友直接打開俄文頁會先被問要暫停哪個）；
   // 已經在用的人（有 langs:last 或學習紀錄）維持以前的預設，並存起來，之後不會再變
+  // 全新的使用者（沒有任何紀錄）：先跳出「你想學哪個語言？」，選完才進到那個語言（導覽也等選完才開始）
+  // langs:welcome＝還沒選；沒選就關掉 App，下次打開還會再問
+  if (store.get('langs:v1', null) == null && store.get('langs:last', null) == null && store.get('n5:progress', null) == null) store.set('langs:welcome', 1);
+  const WELCOME = !!store.get('langs:welcome', 0);
   if (store.get('langs:v1', null) == null) {
     const old = store.get('langs:last', null) != null || store.get('n5:progress', null) != null;
     store.set('langs:v1', { active: old ? ready.slice(0, 2) : [CUR], max: 2, lock: true, note: '' });
@@ -37,7 +41,9 @@
 
   // ---- 打開 App 時回到上次學的語言 ----
   const params = new URLSearchParams(location.search);
-  if (params.get('l')) {
+  if (WELCOME) {
+    // 還沒選語言：不要自動跳到上次的語言
+  } else if (params.get('l')) {
     store.set('langs:last', params.get('l'));
     params.delete('l');
     const q = params.toString();
@@ -155,6 +161,21 @@
     });
     s.querySelector('#lgCancel').onclick = locked ? () => go(c.active[0]) : openPicker;
   }
+  // 第一次使用：選要學的語言
+  const waiting = [];
+  function welcome() {
+    const s = sheet('你想學哪個語言？', `
+      <p class="lg-m" style="margin:0 2px 4px">先選一個開始。之後隨時可以點左上角的語言名稱換語言，或多加一個一起學。</p>
+      ${LANGS.filter(l => l.ready).map(l => `<button class="pk-opt" data-pick="${l.id}"><span class="lg-g" aria-hidden="true">${esc(l.glyph)}</span><span class="pk-n lg-n"><span>${esc(l.name)} <small>${esc(l.sub)}</small></span><span class="lg-pg-t">${esc(l.desc)}</span></span></button>`).join('')}`, { locked: true });
+    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+      const id = b.dataset.pick;
+      saveCfg(Object.assign(cfg(), { active: [id] }));
+      store.set('langs:welcome', 0); store.set('langs:last', id);
+      if (id !== CUR) return location.replace(urlOf(id));
+      close(); AppLangs.welcome = false;
+      waiting.splice(0).forEach(f => { try { f(); } catch (e) {} });
+    });
+  }
   function flash(msg) {
     const t = document.getElementById('toast');
     if (!t) return;
@@ -202,6 +223,7 @@
       brand.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPicker(); } });
     }
     // 直接打開了一個暫停中的語言：先決定要換進來還是回去
+    if (WELCOME) return welcome();
     const c = cfg();
     if (c.lock && !c.active.includes(CUR)) setTimeout(() => askSwap(CUR, true), 300);
   }
@@ -224,5 +246,6 @@
     });
     addEventListener('orientationchange', () => { full = 0; setTimeout(() => { full = vv.height; }, 600); });
   }
-  window.AppLangs = { open: openPicker, current: CUR, list: LANGS, stats(fn) { statFn = fn; saveStat(); } };
+  // welcome：還在等使用者選語言；afterWelcome(fn)：選好（而且留在這一頁）之後再做（例如開始導覽）
+  window.AppLangs = { open: openPicker, current: CUR, list: LANGS, stats(fn) { statFn = fn; saveStat(); }, welcome: WELCOME, afterWelcome(fn) { if (this.welcome) waiting.push(fn); else fn(); } };
 })();
