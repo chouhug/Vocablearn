@@ -164,18 +164,45 @@
   // 第一次使用：選要學的語言
   const waiting = [];
   function welcome() {
-    const s = sheet('你想學哪個語言？', `
-      <p class="lg-m" style="margin:0 2px 4px">先選一個開始。之後隨時可以點左上角的語言名稱換語言，或多加一個一起學。</p>
-      ${LANGS.filter(l => l.ready).map(l => `<button class="pk-opt" data-pick="${l.id}"><span class="lg-g" aria-hidden="true">${esc(l.glyph)}</span><span class="pk-n lg-n"><span>${esc(l.name)} <small>${esc(l.sub)}</small></span><span class="lg-pg-t">${esc(l.desc)}</span></span></button>`).join('')}`, { locked: true });
-    s.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
+    // 整頁蓋住 App（後面的頁面看不到、也不能滑），選完才進去
+    const w = document.createElement('div');
+    w.className = 'lg-welcome'; w.setAttribute('role', 'dialog'); w.setAttribute('aria-modal', 'true'); w.setAttribute('aria-label', '你想學哪個語言？');
+    w.innerHTML = `<div class="lg-w-in">
+      <div class="lg-w-logo" aria-hidden="true">${LANGS.filter(l => l.ready).map(l => `<span>${esc(l.glyph)}</span>`).join('')}</div>
+      <h1>你想學哪個語言？</h1>
+      <p class="lg-m">先選一個開始。之後隨時可以點左上角的語言名稱換語言，或多加一個一起學。</p>
+      <div class="lg-list">${LANGS.filter(l => l.ready).map(l => `<button class="pk-opt" data-pick="${l.id}"><span class="lg-g" aria-hidden="true">${esc(l.glyph)}</span><span class="pk-n lg-n"><span>${esc(l.name)} <small>${esc(l.sub)}</small></span><span class="lg-pg-t">${esc(l.desc)}</span></span></button>`).join('')}</div>
+    </div>`;
+    document.body.appendChild(w);
+    w.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => {
       const id = b.dataset.pick;
       saveCfg(Object.assign(cfg(), { active: [id] }));
       store.set('langs:welcome', 0); store.set('langs:last', id);
       if (id !== CUR) return location.replace(urlOf(id));
-      close(); AppLangs.welcome = false;
+      w.remove(); AppLangs.welcome = false; lockCheck();
       waiting.splice(0).forEach(f => { try { f(); } catch (e) {} });
     });
   }
+
+  // ---- 跳出面板（選單、單字詳細、導覽、選語言）時，後面的頁面不能滑 ----
+  // 面板是各頁自己建立的（ui.js、lang-app.js、導覽…），這裡統一看畫面上有沒有開著的面板
+  const OPEN = '.pk-back:not([hidden]), .tour-card:not([hidden]), .lg-welcome';
+  const SCROLLER = '.pk-list, .sheet-body, .lg-welcome, .tour-card';
+  const isOpen = () => !!document.querySelector(OPEN);
+  function lockCheck() { document.documentElement.classList.toggle('lg-lock', isOpen()); }
+  // iPhone／iPad 的 Safari 有時不理 overflow:hidden：面板開著時，手指不在面板裡能捲動的區域就不讓頁面動
+  let touchY = 0;
+  document.addEventListener('touchstart', e => { touchY = e.touches[0] ? e.touches[0].clientY : 0; }, { passive: true });
+  document.addEventListener('touchmove', e => {
+    if (!document.documentElement.classList.contains('lg-lock') || e.touches.length > 1) return;
+    const sc = e.target.closest && e.target.closest(SCROLLER);
+    if (!sc) return e.preventDefault();
+    // 面板裡捲到頂或底還繼續拉，也不要帶動後面的頁面
+    const dy = (e.touches[0] ? e.touches[0].clientY : 0) - touchY;
+    const canScroll = sc.scrollHeight > sc.clientHeight + 1;
+    if (!canScroll || (dy > 0 && sc.scrollTop <= 0) || (dy < 0 && sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 1)) e.preventDefault();
+  }, { passive: false });
+
   function flash(msg) {
     const t = document.getElementById('toast');
     if (!t) return;
@@ -212,7 +239,21 @@
       .lg-note{background:var(--amb);border:1px solid var(--amb-edge);color:var(--amb-ink);border-radius:12px;padding:10px 12px;display:flex;flex-direction:column;gap:2px}
       .lg-note .lg-m{color:inherit;opacity:.85}
       .lg-btns{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:8px;margin-top:4px}`;
+    st.textContent += `
+      html.lg-lock,html.lg-lock body{overflow:hidden;overscroll-behavior:none}
+      .pk-list,.sheet-body,.tour-card{overscroll-behavior:contain}
+      .lg-welcome{position:fixed;inset:0;z-index:90;background:var(--bg);color:var(--fg);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+        padding:max(28px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(24px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+      .lg-w-in{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:10px;min-height:100%;justify-content:center}
+      .lg-w-in h1{margin:4px 2px 0;font-size:24px;line-height:1.3}
+      .lg-w-in .lg-m{font-size:15px;margin:0 2px 6px}
+      .lg-w-logo{display:flex;gap:6px;margin:0 2px}
+      .lg-w-logo span{width:34px;height:34px;border-radius:9px;background:var(--fill);color:var(--fill-ink);display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:16px}
+      .lg-w-logo span:nth-child(even){background:var(--pri-soft);color:var(--pri)}
+      .lg-welcome .lg-list{display:flex;flex-direction:column;gap:8px}`;
     document.head.appendChild(st);
+    new MutationObserver(lockCheck).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+    lockCheck();
     const brand = document.querySelector('.brand');
     if (brand) {
       brand.classList.add('lg-btn');
