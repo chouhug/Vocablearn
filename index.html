@@ -2724,6 +2724,7 @@ const D = {
 '填空・聽寫': 'Fill-in & dictation', '看例句打出空格裡的字，答對才算「已學會」，之後照時間排到期複習。切到「聽寫」可以練聽力。': 'Type the missing word in a sentence. Getting it right marks the word as learned, and it comes back for review on a schedule. Switch to “Dictation” to train your ear.',
 '每個文法點都有說明和例句，也有動詞、形容詞的變化規則。': 'Every grammar point has an explanation and examples, plus conjugation rules for verbs and adjectives.',
 '單字庫・設定': 'Words & settings', '看進度、搜尋單字、進入錯題和到期複習。下面的「設定」可以調音效、用 Google 登入同步進度、換介面語言。': 'See your progress, search words, and jump into mistakes and due reviews. “Settings” below has sounds, Google sign-in for syncing, and the language switch.',
+'切換語言': 'Switch language', '點左上角的語言名稱可以換到別的語言；也可以鎖定只學其中幾個語言，避免一次學太多。': 'Tap the language name at the top left to switch languages. You can also lock in just a few languages so you don’t take on too much at once.',
 '上方的小按鈕': 'The small buttons on top', '「漢」切換漢字上的假名，「Aa」顯示羅馬拼音，最右邊切換淺色／深色。': '“漢” toggles furigana, “Aa” shows romaji, and the last one switches light/dark.',
 '小提示': 'Tip', '例句裡的單字都可以點，會跳出意思和讀音。準備好就開始吧！': 'Tap any word in a sentence to see its meaning and reading. Ready? Let’s go!',
 // ---- gloss.js：點字看到的說明 ----
@@ -6412,8 +6413,12 @@ function setLang(lang, resumeTour) {
 
 // ================= 首次使用導覽 =================
 const TOUR_ART = `<svg class="tour-art" viewBox="0 0 320 110" aria-hidden="true"><rect width="320" height="110" rx="12" fill="var(--surface2)"/><circle cx="252" cy="34" r="16" fill="var(--c2)"/><path d="M0 110 L70 46 L120 82 L170 30 L240 110Z" fill="var(--c1)"/><path d="M150 50 L170 30 L190 50 L180 46 L170 54 L160 46Z" fill="var(--surface)"/><path d="M120 110 L210 62 L320 104 L320 110Z" fill="var(--c3)"/><path d="M0 98 C60 88 110 104 170 96 S280 86 320 96 L320 110 L0 110Z" fill="var(--pri-soft)"/><rect x="26" y="20" width="44" height="44" rx="10" fill="var(--fill)"/><text x="48" y="51" text-anchor="middle" font-size="28" font-weight="700" fill="var(--fill-ink)" font-family="var(--font-kana)">あ</text></svg>`;
-const TOUR = [
+PAGE.tour = {
+  key: 'n5:toured',
+  art: TOUR_ART,
+  steps: () => [
   { t: '歡迎使用日語 N5', d: '從五十音開始，一路學到 N5 的單字和文法。先選介面語言，接下來用 30 秒認識每個分頁。', lang: true },
+  { el: '.brand', t: '切換語言', d: '點左上角的語言名稱可以換到別的語言；也可以鎖定只學其中幾個語言，避免一次學太多。' },
   { el: '[data-tab="kana"]', tab: 'kana', t: '五十音', d: '平假名、片假名的表，點一個字可以聽發音、看例字；切到「練習」做認字測驗。' },
   { el: '[data-tab="card"]', tab: 'card', t: '字卡：挑要學的字', d: '新字一張一張看：已經會的按「已經會了」，想練的按「列入考題」，之後單選和填空就會出這些字。' },
   { el: '[data-tab="mc"]', tab: 'mc', t: '單選', d: '日→中、中→日、聽發音、漢字讀音、助詞填空、詞性變化，左上角可以換題型和題目來源。' },
@@ -6422,11 +6427,26 @@ const TOUR = [
   { el: '[data-tab="lib"]', tab: 'lib', t: '單字庫・設定', d: '看進度、搜尋單字、進入錯題和到期複習。下面的「設定」可以調音效、用 Google 登入同步進度、換介面語言。' },
   { el: ['#furiBtn', '#romajiBtn', '#themeBtn'], t: '上方的小按鈕', d: '「漢」切換漢字上的假名，「Aa」顯示羅馬拼音，最右邊切換淺色／深色。' },
   { t: '小提示', d: '例句裡的單字都可以點，會跳出意思和讀音。準備好就開始吧！', last: true }
-];
+],
+  extra: st => st.lang ? `<div class="tour-lang" data-noi18n><button class="btn ${LANG === 'zh' ? 'solid' : 'quiet'}" data-tlang="zh">中文（繁體）</button><button class="btn ${LANG === 'en' ? 'solid' : 'quiet'}" data-tlang="en">English</button></div>` : '',
+  bind: (card, T) => $$('[data-tlang]', card).forEach(b => b.onclick = () => { if (b.dataset.tlang === LANG) return T.go(1); setLang(b.dataset.tlang, 1); }),
+  fresh: () => !Object.keys(S.items).some(k => !/^(it|es|de|ru|en):/.test(k))   // 只看日文的紀錄（其他語言的 id 有前綴）
+};
+// @include shared/tour.js
+// ================= 首次使用導覽（日文頁和語言頁共用） =================
+// 各頁不同的地方放在 PAGE.tour：
+//   key      記錄「看過導覽」的 localStorage 鍵（日文 n5:toured、語言頁 it:toured…）
+//   steps()  步驟陣列 [{ t 標題, d 說明, el 要框起來的元素（選擇器或陣列）, tab 要切到的分頁, last 最後一步 }]
+//            el 找不到的步驟會自動跳過（例如英文頁沒有「名」按鈕）
+//   art      第一步上方的插畫（HTML）
+//   extra(st)、bind(card, Tour)  步驟裡額外的內容和按鈕（日文頁用來選介面語言）
+//   fresh()  還沒有這個語言的學習紀錄（有紀錄的人不會自動跳出導覽）
 const Tour = {
-  i: 0, ring: null, card: null,
+  i: 0, ring: null, card: null, back: null, list: [],
   start(i) {
-    this.i = i || 0;
+    const T = PAGE.tour;
+    this.list = T.steps().filter(st => !st.el || [].concat(st.el).some(s => $(s)));
+    this.i = Math.max(0, Math.min(this.list.length - 1, i || 0));
     if (!this.ring) {
       this.ring = document.createElement('div'); this.ring.className = 'tour-ring';
       this.card = document.createElement('div'); this.card.className = 'tour-card'; this.card.setAttribute('role', 'dialog'); this.card.setAttribute('aria-modal', 'true');
@@ -6438,23 +6458,23 @@ const Tour = {
     this.show();
   },
   show() {
-    const st = TOUR[this.i];
+    const T = PAGE.tour, st = this.list[this.i];
     if (st.tab && UI.tab !== st.tab) showTab(st.tab);
-    const dots = TOUR.map((_, j) => `<i class="${j === this.i ? 'on' : ''}"></i>`).join('');
+    const dots = this.list.map((_, j) => `<i class="${j === this.i ? 'on' : ''}"></i>`).join('');
     this.card.setAttribute('aria-label', st.t);
-    this.card.innerHTML = `${this.i === 0 ? TOUR_ART : ''}<h3>${esc(st.t)}</h3><p>${esc(st.d)}</p>
-      ${st.lang ? `<div class="tour-lang" data-noi18n><button class="btn ${LANG === 'zh' ? 'solid' : 'quiet'}" data-tlang="zh">中文（繁體）</button><button class="btn ${LANG === 'en' ? 'solid' : 'quiet'}" data-tlang="en">English</button></div>` : ''}
+    this.card.innerHTML = `${this.i === 0 && T.art ? T.art : ''}<h3>${esc(st.t)}</h3><p>${esc(st.d)}</p>
+      ${T.extra ? T.extra(st) : ''}
       <div class="tour-dots" aria-hidden="true">${dots}</div>
       <div class="row">${st.last ? '' : '<button class="btn quiet" data-tour="skip">略過</button>'}${this.i > 0 && !st.last ? '<button class="btn quiet" data-tour="prev">上一步</button>' : ''}<button class="btn solid" data-tour="${st.last ? 'end' : 'next'}">${st.last ? '開始學習' : '下一步'}</button></div>`;
-    $$('[data-tlang]', this.card).forEach(b => b.onclick = () => { if (b.dataset.tlang === LANG) return this.go(1); setLang(b.dataset.tlang, 1); });
+    if (T.bind) T.bind(this.card, this);
     $$('[data-tour]', this.card).forEach(b => b.onclick = () => { const a = b.dataset.tour; if (a === 'next') this.go(this.i + 1); else if (a === 'prev') this.go(this.i - 1); else this.end(); });
     this.place();
     requestAnimationFrame(() => { const f = $('[data-tour="next"],[data-tour="end"]', this.card); if (f) f.focus({ preventScroll: true }); });
   },
-  go(i) { this.i = Math.max(0, Math.min(TOUR.length - 1, i)); this.show(); },
+  go(i) { this.i = Math.max(0, Math.min(this.list.length - 1, i)); this.show(); },
   place() {
     if (!this.card || this.card.hidden) return;
-    const st = TOUR[this.i], vh = window.innerHeight;
+    const st = this.list[this.i], vh = window.innerHeight;
     const els = st.el ? [].concat(st.el).map(s => $(s)).filter(Boolean) : [];
     this.card.style.top = this.card.style.bottom = '';
     if (!els.length) {
@@ -6471,12 +6491,15 @@ const Tour = {
     else this.card.style.top = (r.b + 14) + 'px';
   },
   end() {
-    store.set('n5:toured', 1);
+    store.set(PAGE.tour.key, 1);
     this.back.hidden = this.ring.hidden = this.card.hidden = true;
     showTab('card');
-  }
+  },
+  // 啟動時呼叫：沒看過導覽、也還沒有這個語言的紀錄才自動開始
+  auto() { if (!store.get(PAGE.tour.key, 0) && PAGE.tour.fresh()) this.start(0); }
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card && !Tour.card.hidden) Tour.end(); });
+// @end shared/tour.js
 
 // ================= 啟動 =================
 applyTheme();
@@ -6489,7 +6512,7 @@ Cloud.init();
 {
   const resume = store.get('n5:tourResume', null);
   if (resume != null) { store.set('n5:tourResume', null); Tour.start(resume); }
-  else if (!store.get('n5:toured', 0) && !Object.keys(S.items).length) Tour.start(0);
+  else Tour.auto();
 }
 })();
 
