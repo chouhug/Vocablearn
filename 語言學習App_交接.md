@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v85'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v89'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -74,6 +74,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - `shared/fill-tab.js`：填空分頁的流程（fillRound、FILL_SRCS、renderFill、nextFillQ、scrollFillTop）：選題、送出、判斷、記錄、音效、下一題、手機鍵盤。題目本身由 `PAGE.fill.make(w, R)` 產生（日文：振り仮名、羅馬拼音、假名即時轉換、checkFill；語言頁：answerSpan、重音提醒 markDiff、同義字 synonymOf、答完念例句）。日文的聽寫（renderDict、nextDictQ）還在 index.html，用 `PAGE.fill.alt()` 切過去。
   - `shared/mc-tab.js`：單選分頁的回合管理（mcRound、MC_SRCS、renderMC、nextMCQ）、三種基本題型（看單字選意思、看意思選單字、聽發音選意思），和 emptyWords（沒有題目時的提示，單選、填空、聽寫共用）。一輪的設定用 `PAGE.mc.roundKey()` 判斷（設定變了就重新出題）。特殊題型留在各頁：日文的漢字讀音（nextReadQ）、助詞（nextPartQ）、詞性變化（nextConjQ），語言頁的冠詞／格與性別、介係詞練習句、動詞變化（在 PAGE.mc.question 和 special 裡）。日文頁換日→中／中→日／聽→中會接著同一輪（resetOnMode: false），語言頁換題型會重新出題。
   - `shared/gram-tab.js`：文法關卡（gxKey、gxNeed、gxStages、gxNext、gxRecord、gxPathHTML、gxWhere）、練習題流程（startGxQuiz）、文法點頁（renderGramPoint：說明／看範例／練習題、例句卡片）、openGram 和 data-gram 的點擊。文法列表、變化規則頁、範例拆解（gxExamplesHTML）還是各頁自己的；一題練習題怎麼畫在 `PAGE.gram.quizQ`。gramPane、gramPaneId、gramShow 由各頁宣告。
+  - `shared/tour.js`：首次使用導覽（Tour），各頁的步驟和文字在 `PAGE.tour`。
   - `shared/voice.js`：Voice（讀語音、挑聲音、念）和設定裡的語音區 renderVoiceBox。各語言怎麼挑聲音在 `PAGE.voice`（日文會避開 Ichiro、Haruka 這類很機械的舊語音；語言頁看語言代碼、Google 語音和 config.js 的 voiceNames）。`Voice.speak(text, voiceOverride, rate)`。
 - 每個語言有自己的背景插畫（義大利：絲柏、托斯卡尼小鎮；西班牙：風車、橄欖樹；德國：阿爾卑斯雪山、城堡、桁架屋、冷杉；俄羅斯：洋蔥頂教堂、白樺樹、木屋；英文：鐘樓、拱橋、雙層巴士）。
 - 測試：`node n5src/it/test.js`（21061 項）、`node n5src/es/test.js`（20974 項）、`node n5src/de/test.js`（31429 項）、`node n5src/ru/test.js`（32586 項）、`node n5src/en/test.js`（19897 項），目前全部通過。
@@ -124,6 +125,8 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **各語言的初次導覽**：導覽程式從日文頁抽成 n5src/shared/tour.js（日文頁用 `// @include`、語言頁用 `/*@include*/`），各頁不同的地方在 `PAGE.tour`（key、steps()、art、extra／bind、fresh()）。義、西、德、俄、英頁第一次打開（還沒有該語言的紀錄、也沒看過）會跳出 10 步導覽：歡迎、切換語言、發音、字卡、單選、填空、文法、單字庫・設定、上方按鈕、小提示；看過的紀錄存在 `it:toured`、`es:toured`…（日文還是 `n5:toured`），設定的「介面語言」區有「重看使用導覽」。各語言的說明可以在 config.js 用 `tourIntro`、`tourPron`、`tourFill` 覆寫（俄、英改了發音頁說明，各語言的填空寫了拼寫規則）；找不到元素的步驟自動略過（英文頁沒有「名」按鈕）。日文頁導覽多了「切換語言」一步（有英文翻譯），而且改成只看日文的紀錄（以前學過其他語言就不會跳出日文導覽）。
+
 - **GitHub Actions 實測**：模擬從 iPad 只上傳 n5-src.zip（只改了 zip 裡的這份交接文件），由 Action 自動更新網站上的這個檔案和快取版本。
 
 - **GitHub Actions 自動檢查和部署**：新增 .github/workflows/site.yml，以及 n5src/test-all.js（全部測試）、deploy.js（zip → 網站）、pack.py（打包 zip）。在本機用 git repo 模擬過：只上傳 zip → 自動更新 it.html 和快取版本並 commit，再跑一次判斷一致；直接改網站檔案 → 失敗不覆蓋；測試失敗 → 擋下。
@@ -173,7 +176,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 待辦和點子
 
-0. **日文頁和語言頁共用程式（接續第一階段）**：還有 57 個函式兩邊各一份、內容大同小異（renderMC、renderCard、renderFill、renderLib、Voice、Sfx、Picker、startGxQuiz、renderGram…），以及日文頁獨有的功能（五十音、振り仮名、詞性變化、聽寫、導覽、English 介面）。建議順序：
+0. **日文頁和語言頁共用程式（接續第一階段）**：還有 57 個函式兩邊各一份、內容大同小異（renderMC、renderCard、renderFill、renderLib、Voice、Sfx、Picker、startGxQuiz、renderGram…），以及日文頁獨有的功能（五十音、振り仮名、詞性變化、聽寫、English 介面；導覽已共用）。建議順序：
    - ~~第二階段：共用的介面零件搬進 ui.js~~（已完成；Voice 兩邊差比較多，留到第三階段）。
    - 第三階段：分頁逐一合併到 n5src/shared/，差異放在 PAGE。~~單字庫＋設定~~、~~字卡~~、~~填空~~、~~單選~~、~~文法頁~~、~~語音~~（第三階段完成：shared/lib-tab.js、card-tab.js、fill-tab.js、mc-tab.js、gram-tab.js、voice.js）。
    - 注意：「已排除」清單只會有 2026-10-26 以前在日文頁按「排除」的字（那天之後兩邊都沒有排除按鈕）。使用者還沒決定要把排除功能加回來，或在清單是 0 時把它藏起來。
@@ -185,7 +188,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 3. **假名筆順動畫**：可用 KanjiVG（CC BY-SA 3.0，要註明來源），可能需要使用者自己下載檔案，因為 Claude 的環境連不到 GitHub 原始檔。
 4. 義、西、德填空加特殊字母按鈕（à è é ñ ¿ ¡ ä ö ü ß）。
 5. 選單裡「準備中」的語言可以先藏起來（使用者看到會不舒服）。
-6. 義、西頁的英文介面、使用導覽。
+6. 義、西頁的英文介面（~~使用導覽~~ 已完成）。
    英文可以再加：更多 B2 單字（目標 800 以上）、片語動詞的專門練習、寫作常用句型。
 7. 俄文可以再加：數字的變格（двух、пяти）、形容詞短尾形、更多動詞（運動動詞加前綴：прийти 以外的 выйти、войти）。
 8. 德文可以再加：屬格、形容詞受格／與格詞尾的專門練習題。
