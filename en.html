@@ -644,6 +644,12 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 /* 拉起式面板 Sheet 的內容、提醒框（日文頁也用得到；語言頁在 lang-style.css 也有同樣的規則） */
 .sheet-body{overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:0 2px 6px;min-height:0}
 .hl-warn{background:var(--amb);border:1px solid var(--amb-edge);color:var(--amb-ink);border-radius:10px;padding:8px 12px;font-size:15px}
+/* 我的單字表單：「更多」和英文解釋收起來 */
+.mymore,.dict-en{border-top:1px solid var(--line);padding-top:6px}
+.mymore>summary,.dict-en>summary{cursor:pointer;min-height:40px;display:flex;align-items:center;font-weight:600;color:var(--pri)}
+.dict-en{display:flex;flex-direction:column;gap:6px}
+.dict-en[open]{display:flex}
+.dict-auto{color:var(--fg)}
 
 /* 語言頁（義大利文、西班牙文、德文、俄文…）：沿用日文 App 的樣式（建置時從 ../index.html 抽出），這裡只補語言頁需要的部分 */
 :root{--font-ja:var(--font-ui);--font-kana:var(--font-ui)}
@@ -4996,6 +5002,19 @@ const PAGE = {
     posOpts: [['o', '其他'], ['n', '名詞'], ['v', '動詞'], ['adj', '形容詞']],
     builtin: word => WORDS.find(w => !w.custom && IT.norm(w.word).toLowerCase() === IT.norm(word).toLowerCase()),
     check: c => c.s && !answerSpan({ sent: c.s, ans: c.a || c.w })[1] ? `例句裡找不到「${c.a || c.w}」。如果這個字在例句裡有變化，請在「例句裡的寫法」填上例句裡的樣子。` : '',
+    // 單字在例句裡有變化：找開頭最像的那個字（whisker → whiskers、усы → усами）
+    guessForm: (sent, word) => {
+      const wn = IT.norm(word).toLowerCase();
+      if (/\s/.test(wn)) return '';
+      let best = '', bl = 0;
+      for (const t of IT.tokenize(sent)) {
+        if (!t.w) continue;
+        const k = IT.norm(t.t).toLowerCase(); let i = 0;
+        while (i < k.length && i < wn.length && k[i] === wn[i]) i++;
+        if (i > bl) { bl = i; best = t.t; }
+      }
+      return bl >= Math.min(wn.length, Math.max(2, wn.length - 3)) ? best : '';
+    },
     changed: () => refreshPassive(true)
   },
   lib: {
@@ -5305,50 +5324,87 @@ async function dictLookup(word, lang) {
   if (m && m.responseData) add(m.responseData.translatedText);
   return { defs: defs.slice(0, 4), zh: zh.slice(0, 3), offline: w === undefined && m === undefined };
 }
+// 日文的讀音：從 Wiktionary 條目原始碼的 {{ja-pos|noun|ひげ}}、{{ja-noun|ひげ}}、{{ja-verb|type=1|そる}} 這類標籤找假名。
+// 回傳候選讀音（可能是空陣列）；連不上回傳 undefined。這裡不檢查對不對得上，由頁面用 align() 確認後才填。
+async function dictReading(word) {
+  const j = await dictFetch('https://en.wiktionary.org/w/api.php?action=query&prop=revisions&rvprop=content&rvslots=main&format=json&formatversion=2&redirects=1&origin=*&titles=' + encodeURIComponent(String(word).trim()));
+  if (j === undefined) return undefined;
+  const pg = j && j.query && j.query.pages && j.query.pages[0];
+  const txt = pg && pg.revisions && pg.revisions[0] && pg.revisions[0].slots && pg.revisions[0].slots.main;
+  const src = txt ? String(txt.content != null ? txt.content : txt['*'] || '') : '';
+  const at = src.indexOf('==Japanese==');
+  if (at < 0) return [];
+  const rest = src.slice(at + 12), end = rest.search(/\n==[^=]/);
+  const ja = end < 0 ? rest : rest.slice(0, end);
+  const out = [], kana = /^[ぁ-ゖァ-ヺー]+$/;
+  for (const m of ja.matchAll(/\{\{ja-(?:pos|noun|verb|verb-suru|adj|phrase|adv|see)\|([^{}]*)\}\}/g)) {
+    for (const a of m[1].split('|')) {
+      if (a.includes('=')) continue;
+      const k = a.replace(/[\s.\-^%']/g, '');
+      if (kana.test(k) && !out.includes(k)) out.push(k);
+    }
+  }
+  return out;
+}
 // ================= 我的單字：新增／編輯自己的單字（n5src/shared/mine.js） =================
 // 自己新增的字存在進度紀錄的 c 欄位（S.items[id].c），所以會跟著合併和 Google 同步；頁面的 syncMine() 把它們放進 WORDS。
 // 各頁不一樣的地方在 PAGE.mine：
 //   prefix 紀錄 id 的開頭、lang 輸入框的語言代碼、name 語言名稱、posOpts 詞性選項（沒有就不顯示詞性）、
 //   readings（日文）：多兩個欄位「讀音」c.r 和「例句的讀法」c.sr、
 //   dict（有才顯示「查字典」，程式在 shared/dict.js）：線上字典用的語言代碼、
+//   needReading(word)（日文）：這個字要不要填讀音、autoReading(word)（日文）：查讀音，回傳對得上的假名或 ''、
+//   guessForm(例句, 單字)：沒填「例句裡的寫法」時猜例句裡的樣子（找不到回傳 ''）、
 //   builtin(word) 單字庫裡原本就有的同一個字、check(c) 檢查內容（回傳錯誤訊息或 ''）、changed() 存檔或刪除後更新畫面
+// 表單只露出「單字、（讀音）、意思」三欄：打完單字會自動查字典，把第一個中文翻譯（日文連讀音）填好；
+// 例句、詞性這些放在「更多」裡，可以不填
 // look：打開就先查一次字典（從「查字典並加到我的單字」進來）
 function editMine(id, preset, look_) {
   const M = PAGE.mine;
   const old = id && S.items[id] && S.items[id].c;
   const c = old || { w: preset || '', zh: '', p: 'o' };
-  const field = (k, label, val, lang) => `<label class="label" for="my-${k}">${label}</label><input id="my-${k}" type="text" value="${esc(val || '')}"${lang ? ` lang="${lang}"` : ''} autocapitalize="off" autocorrect="off" spellcheck="false">`;
+  const field = (k, label, val, lang) => `<label class="label" for="my-${k}">${label}</label><input id="my-${k}" type="text" value="${esc(val || '')}"${lang ? ` lang="${lang}"` : ''} autocapitalize="off" autocorrect="off" spellcheck="false"${k === 'w' && M.dict ? ' enterkeyhint="search"' : ''}>`;
+  const hasMore = !!(c.s || (c.p && c.p !== 'o'));
   const el = Sheet.open(old ? '編輯我的單字' : '新增自己的單字', `<form id="myForm" class="myform" autocomplete="off" novalidate>
     ${field('w', `單字或片語（${esc(M.name)}）`, c.w, M.lang)}
-    ${M.dict ? '<button class="btn quiet" type="button" id="myLook">查字典</button><div class="dictbox" id="myDict" hidden></div>' : ''}
-    ${M.readings ? field('r', '讀音（平假名；單字有漢字才要填）', c.r, M.lang) : ''}
+    ${M.readings ? `<div id="myRBox"${M.needReading(c.w || '') || c.r ? '' : ' hidden'}>${field('r', '讀音（假名）', c.r, M.lang)}</div>` : ''}
     ${field('zh', '意思', c.zh)}
-    ${M.posOpts ? `<label class="label" for="my-p">詞性</label>
+    ${M.dict ? '<div class="dictbox" id="myDict" hidden></div>' : ''}
+    <details class="mymore" id="myMore"${hasMore ? ' open' : ''}><summary>更多：例句${M.posOpts ? '、詞性' : ''}（可以不填）</summary><div class="myform">
+    ${M.posOpts ? `<label class="label" for="my-p">詞性（只用來篩選）</label>
     <select id="my-p">${M.posOpts.map(([k, l]) => `<option value="${k}"${(c.p || 'o') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
-    <label class="label" for="my-s">例句（可以不填）</label>
+    <label class="label" for="my-s">例句</label>
     <textarea id="my-s" lang="${M.lang}" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false">${esc(c.s || '')}</textarea>
-    ${M.readings ? field('sr', '例句的讀法（整句用平假名；可以不填，填了才有振り仮名和拼音）', c.sr, M.lang) : ''}
-    ${field('a', '例句裡的寫法（這個字在例句裡有變化才要填）', c.a, M.lang)}
-    ${field('sz', '例句的中文（可以不填）', c.sz)}
+    ${field('sz', '例句的中文', c.sz)}
+    ${M.readings ? field('sr', '例句的讀法（整句用平假名；填了例句的漢字才有振り仮名）', c.sr, M.lang) : ''}
+    ${field('a', '例句裡的寫法（通常不用填，App 會自己找；找錯了再填）', c.a, M.lang)}
+    </div></details>
     <div class="hl-warn" id="myMsg" role="alert" hidden></div>
     <div class="btnrow${old ? '' : ' one'}">${old ? '<button class="btn quiet" type="button" id="myDel">刪除</button>' : ''}<button class="btn solid" type="submit">儲存</button></div>
-    <p class="meta" style="margin:0">存好後會直接列入考題，字卡、單選、填空都會出；沒有例句時，填空直接考這個字。用 Google 登入會同步到其他裝置；備份碼不包含自己新增的單字。${M.dict ? '按「查字典」時，這個字會送到 Wiktionary 和 MyMemory 兩個免費服務去查。' : ''}</p>
+    <p class="meta" style="margin:0">存好就列入考題。${M.dict ? '打完單字會自動查字典（Wiktionary、MyMemory），填好的意思可以自己改。' : ''}</p>
   </form>`);
-  const val = k => $('#my-' + k, el).value.trim().replace(/\s+/g, ' ');
+  const val = k => { const x = $('#my-' + k, el); return x ? x.value.trim().replace(/\s+/g, ' ') : ''; };
+  const more = $('#myMore', el);
   const msg = t => { const m = $('#myMsg', el); m.textContent = t; m.hidden = !t; if (t) m.scrollIntoView({ block: 'nearest' }); };
   const done = text => { saveLocal(); Cloud.schedule(); Sheet.close(); M.changed(); toast(text); };
+  const rbox = $('#myRBox', el);
+  const showR = () => { if (rbox) rbox.hidden = !(M.needReading(val('w')) || val('r')); };
   $('#myForm', el).onsubmit = e => {
     e.preventDefault();
-    const n = { w: val('w'), zh: val('zh') };
+    let n = { w: val('w'), zh: val('zh') };
     if (M.posOpts) n.p = $('#my-p', el).value;
     if (M.readings && val('r')) n.r = val('r');
     if (val('s')) { n.s = val('s'); if (val('sz')) n.sz = val('sz'); if (val('a') && val('a') !== n.w) n.a = val('a'); if (M.readings && val('sr')) n.sr = val('sr'); }
     const nid = M.prefix + n.w;
     reloadShared();
-    let err = !n.w ? '請輸入單字。' : !n.zh ? '請輸入意思。' : '';
+    let err = !n.w ? '請輸入單字。' : !n.zh ? '請輸入意思（也可以等字典查完自動填）。' : '';
     if (!err && nid !== id) err = M.builtin(n.w) ? `單字庫裡本來就有「${n.w}」，用上面的搜尋就找得到。` : S.items[nid] && S.items[nid].c ? `你已經新增過「${n.w}」了。` : '';
     if (!err) err = M.check(n);
-    if (err) { Sfx.ng(); return msg(err); }
+    // 例句裡找不到原形：猜例句裡的寫法（whisker → whiskers、食べる → 食べました）
+    if (err && n.s && !n.a && M.guessForm) {
+      const g = M.guessForm(n.s, n.w), n2 = g && g !== n.w ? Object.assign({}, n, { a: g }) : null;
+      if (n2 && !M.check(n2)) { n = n2; err = ''; }
+    }
+    if (err) { Sfx.ng(); if (/例句/.test(err)) more.open = true; return msg(err); }
     const now = Date.now(), prev = id && S.items[id];
     const r = Object.assign(prev ? JSON.parse(JSON.stringify(prev)) : blankRec(), { c: n, t: now });
     if (!prev) { r.s = 'queued'; r.q = now; }
@@ -5356,33 +5412,45 @@ function editMine(id, preset, look_) {
     S.items[nid] = r;
     done(old ? '已儲存' : '已加到我的單字，並列入考題');
   };
-  // ---- 查字典：結果點一下填進「意思」----
-  const look = $('#myLook', el), dbox = $('#myDict', el);
-  let seq = 0;
-  const runLook = async () => {
+  // ---- 自動查字典：打完單字（離開欄位或按 Enter）就查，第一個中文翻譯直接填進「意思」----
+  const dbox = $('#myDict', el), wIn = $('#my-w', el);
+  let seq = 0, lastWord = old ? c.w : '';
+  const runLook = async force => {
     const word = val('w');
-    if (!word) { $('#my-w', el).focus(); return; }
-    const my = ++seq;
-    look.disabled = true; look.textContent = '查詢中…';
+    if (!dbox || !word || (!force && word === lastWord)) return;
+    lastWord = word;
+    const my = ++seq, zhIn = $('#my-zh', el), rIn = $('#my-r', el);
     dbox.hidden = false; dbox.innerHTML = '<p class="meta" style="margin:0">正在查「' + esc(word) + '」…</p>';
-    const r = await dictLookup(word, M.dict);
-    if (my !== seq || !document.contains(dbox)) return;   // 查的時候又按了一次，或面板已經關了
-    look.disabled = false; look.textContent = '再查一次';
-    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典，請確認網路後再試。意思可以先自己填。</p>'; return; }
-    if (!r.defs.length && !r.zh.length) { dbox.innerHTML = '<p class="meta" style="margin:0">字典裡查不到「' + esc(word) + '」（可以檢查拼字，或改查原形）。意思可以自己填。</p>'; return; }
-    dbox.innerHTML = (r.zh.length ? `<div class="label">中文（機器翻譯，可能不準）</div><div class="chips dict-zh">${r.zh.map(z => `<button type="button" class="chip" data-fill="${esc(z)}">${esc(z)}</button>`).join('')}</div>` : '') +
-      (r.defs.length ? `<div class="label">英文解釋（Wiktionary）</div>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}` : '') +
-      '<p class="meta" style="margin:0">點一下就會填進「意思」，填完還可以自己改。</p>';
-    $$('[data-fill]', dbox).forEach(b => b.onclick = () => {
-      const inp = $('#my-zh', el), t = b.dataset.fill, cur = inp.value.trim();
-      if (!cur) inp.value = t; else if (!cur.split('；').includes(t)) inp.value = cur + '；' + t;
-      b.setAttribute('aria-pressed', 'true'); msg('');
-    });
-    // 詞性還沒選（其他）時，照字典的第一個詞性選
-    const sel = $('#my-p', el);
-    if (sel && r.defs.length && sel.value === 'o' && M.posOpts.some(o => o[0] === r.defs[0].p)) sel.value = r.defs[0].p;
+    const needR = M.readings && M.autoReading && M.needReading(word) && !val('r');
+    const [r, rd] = await Promise.all([dictLookup(word, M.dict), needR ? M.autoReading(word) : '']);
+    if (my !== seq || !document.contains(dbox)) return;   // 查的時候又改了單字，或面板已經關了
+    const notes = [];
+    if (rd && rIn && !val('r')) { rIn.value = rd; showR(); notes.push('讀音'); }
+    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典。意思請自己填，有網路時可以<button type="button" class="linkbtn" id="myRe">再查一次</button>。</p>'; }
+    else if (!r.defs.length && !r.zh.length) { dbox.innerHTML = '<p class="meta" style="margin:0">字典裡查不到「' + esc(word) + '」（可以檢查拼字，或改查原形）。意思請自己填。</p>'; }
+    else {
+      const first = r.zh[0] || (r.defs[0] && r.defs[0].defs[0]) || '';
+      if (first && !zhIn.value.trim()) { zhIn.value = first; notes.push('意思'); }
+      dbox.innerHTML = (notes.length ? `<p class="meta dict-auto" style="margin:0">已自動填入${notes.join('和')}，不對可以直接改，或點下面其他的意思。</p>` : '') +
+        (r.zh.length ? `<div class="label">中文（機器翻譯，可能不準）</div><div class="chips dict-zh">${r.zh.map(z => `<button type="button" class="chip" data-fill="${esc(z)}"${z === zhIn.value.trim() ? ' aria-pressed="true"' : ''}>${esc(z)}</button>`).join('')}</div>` : '') +
+        (r.defs.length ? `<details class="dict-en"${r.zh.length ? '' : ' open'}><summary>英文解釋（Wiktionary）</summary>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}</details>` : '');
+      // 點一下：換成這個意思；按住已經填好的再點別的，會接在後面
+      $$('[data-fill]', dbox).forEach(b => b.onclick = () => {
+        const t = b.dataset.fill, cur = zhIn.value.trim(), auto = notes.includes('意思') && cur === first;
+        if (!cur || auto) zhIn.value = t; else if (!cur.split('；').includes(t)) zhIn.value = cur + '；' + t;
+        notes.length = 0;
+        $$('[data-fill]', dbox).forEach(x => x.setAttribute('aria-pressed', String(zhIn.value.split('；').includes(x.dataset.fill))));
+        msg('');
+      });
+      const sel = $('#my-p', el);
+      if (sel && r.defs.length && sel.value === 'o' && M.posOpts.some(o => o[0] === r.defs[0].p)) sel.value = r.defs[0].p;
+    }
+    const re = $('#myRe', dbox); if (re) re.onclick = () => runLook(true);
   };
-  if (look) { look.onclick = runLook; if (look_ && !old && c.w) runLook(); }
+  wIn.addEventListener('input', showR);
+  wIn.addEventListener('change', () => runLook());
+  wIn.addEventListener('keydown', e => { if (e.key === 'Enter' && dbox) { e.preventDefault(); runLook(); $('#my-zh', el).focus(); } });
+  if (dbox && look_ && !old && c.w) runLook();
   const del = $('#myDel', el);
   if (del) del.onclick = () => {
     if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = '確定刪除？'; return; }
@@ -5390,7 +5458,7 @@ function editMine(id, preset, look_) {
     S.items[id] = Object.assign(blankRec(), { t: Date.now() });   // 留下空白紀錄（帶時間），同步時其他裝置也會刪掉
     done('已刪除');
   };
-  if (!c.w) setTimeout(() => $('#my-w', el).focus(), 250);
+  if (!c.w) setTimeout(() => wIn.focus(), 250);
 }
 // 切換語言選單裡的進度條（lang.js）
 if (window.AppLangs && AppLangs.stats) AppLangs.stats(() => { const c = libCounts(); return { l: c.learned, t: Math.max(1, c.total - c.excluded) }; });
