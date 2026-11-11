@@ -626,6 +626,12 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .myform input:focus,.myform textarea:focus{border-color:var(--pri);outline:none}
 .myform .btnrow{margin-top:10px}
 .myform .btnrow.one{grid-template-columns:1fr}
+/* 我的造句（單字頁） */
+.usbox{display:flex;flex-direction:column;gap:8px}
+.mysents{display:flex;flex-direction:column;gap:8px}
+.mysent{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);display:flex;flex-direction:column;gap:2px}
+.mysent .linkbtn{align-self:flex-end;min-height:32px}
+.usform .btn{min-height:44px}
 </style>
 </head><body>
 <header class="top"><div class="wrap">
@@ -5339,12 +5345,13 @@ const PAGE = {
 //   syncNote 同步說明、expNote(n) 匯出後的說明、impNote 匯入說明、impKeep(id) 匯入時要收的紀錄、
 //   impToast(n) 匯入完成訊息、wordCell(w) 清單裡的單字、bind(host) 綁定 langHTML／extraHTML 的按鈕、
 //   resetRounds() 換每輪題數時要清掉的其他回合、onEntryMc() 從入口進單選前要做的事、
+// 頁面有 PAGE.sents 才顯示「我的造句」清單（wordPool('sent')：寫過句子的字；點進去在單字頁看和改）
 // 頁面有 PAGE.mine 才顯示「新增自己的單字」和「我的單字」清單（表單 editMine 在 shared/mine.js）
 let libList = 'queued';
 const entryBtn = (tab, src, title, n) => `<button data-go="${tab}:${src}"${n ? '' : ' class="zero"'}><span>${title}</span><b>${n}</b></button>`;
 function libCounts() {
   const t = today(), rset = recentIds();
-  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0, mine: 0 };
+  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0, mine: 0, sent: 0 };
   for (const w of WORDS) {
     const r = getRec(w.id);
     if (r.s === 'learned') { c.learned++; if (r.due && r.due <= t) c.dueAll++; }
@@ -5352,6 +5359,7 @@ function libCounts() {
     if (r.s === 'excluded') c.excluded++;
     if (rset.has(w.id)) c.recent++;
     if (w.custom) c.mine++;
+    if (r.u && r.u.length) c.sent++;
     const ww = r.w || {};
     if (ww.mc === 1) c.mcW++; if (ww.mc === 2) c.mcR++;
     if (ww.fill === 1) c.fillW++; if (ww.fill === 2) c.fillR++;
@@ -5378,8 +5386,8 @@ function renderLib() {
     <div class="results" id="results"></div>
     ${PAGE.mine ? '<button class="btn quiet block" id="addMine">＋ 新增自己的單字</button>' : ''}
     ${ents.length ? `<div class="entry">${ents.map(x => entryBtn(...x)).join('')}</div>` : '<p class="meta" style="margin:0">目前沒有要複習的題目。練習時答錯的字、到期的字會出現在這裡。</p>'}
-    <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題${PAGE.mine ? '、我的單字' : ''}）</summary>
-      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
+    <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題${PAGE.mine ? '、我的單字' : ''}${PAGE.sents ? '、我的造句' : ''}）</summary>
+      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : [], PAGE.sents ? [['sent', '我的造句', c.sent]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
       <div class="lrows"></div>
     </details>
     <details class="lst"${Cloud.mode === 'google' && !Cloud.user ? ' open' : ''}><summary>設定<span class="n sync${Cloud.ref ? ' on' : ''}" id="syncState"><i></i><span>${esc(Cloud.chip())}</span></span></summary>
@@ -5483,15 +5491,16 @@ function fillList(d) {
   if (key === 'learned') arr = arr.slice().sort((a, b) => (getRec(a.id).due || '').localeCompare(getRec(b.id).due || ''));
   const box = $('.lrows', d);
   if (!arr.length) { box.innerHTML = '<div class="lrow"><span class="z">目前是空的</span></div>'; return; }
-  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復', mine: '編輯' }[key];
+  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復', mine: '編輯', sent: '查看' }[key];
   box.innerHTML = arr.map(w => {
     const r = getRec(w.id);
     const dd = key === 'learned' ? `<span class="d">${r.due ? r.due.slice(5).replace('-', '/') : ''} · 第${(r.lv || 0) + 1}級</span>` : '';
-    return `<div class="lrow">${PAGE.lib.wordCell(w)}<span class="z">${meanW(w)}</span>${dd}<button data-id="${esc(w.id)}">${act}</button></div>`;
+    return `<div class="lrow">${PAGE.lib.wordCell(w)}<span class="z">${meanW(w)}</span>${dd}<button data-id="${esc(w.id)}">${key === 'sent' ? (r.u || []).length + ' 句' : act}</button></div>`;
   }).join('');
   $$('button[data-id]', box).forEach(b => b.onclick = () => {
     const id = b.dataset.id, r = getRec(id);
     if (key === 'mine') return editMine(id);
+    if (key === 'sent') return openWord(id);
     if (key === 'queued') touch(id, { s: 'new' });
     else if (key === 'learned') touch(id, { s: 'new', lv: 0, due: '' });
     else if (key === 'excluded') touch(id, { s: 'new' });
