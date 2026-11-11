@@ -3747,6 +3747,7 @@ const T = x => E.content[x] ?? E.dict[x] ?? x;
 const LNS = '(日語|日文|義大利文|西班牙文|德文|俄文|英文)';
 const RX = src => new RegExp(src.replace(/LN/g, LNS));
 R(/^「(.+)」的一部分$/, 'part of “$1”');
+R(/^(名詞|Noun)・(\S+)$/, (m, a, g) => `Noun · ${E.dict[g] ?? E.content[g] ?? g}`);
 R(/^(現在式|過去式|命令式|將來式|過去分詞|現在分詞|條件式|副動詞) (.+)$/, (m, a, b) => `${E.dict[a] ?? a} ${b}`);
 R(/^原形（不加 (.+)）$/, 'base form (without $1)');
 R(/^過去式用 (.+)$/, 'past tense with $1');
