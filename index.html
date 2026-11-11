@@ -632,6 +632,13 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .mysent{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);display:flex;flex-direction:column;gap:2px}
 .mysent .linkbtn{align-self:flex-end;min-height:32px}
 .usform .btn{min-height:44px}
+/* 查字典的結果（shared/mine.js） */
+.dictbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2)}
+.dictbox .chips{flex-wrap:wrap}
+.dict-pos{font-size:13px;font-weight:700;margin-top:4px}
+.dict-pos span{font-weight:400;color:var(--muted)}
+.dict-def{text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;font-size:15px;line-height:1.35;min-height:40px}
+.dict-def[aria-pressed="true"]{border-color:var(--pri)}
 </style>
 </head><body>
 <header class="top"><div class="wrap">
