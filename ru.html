@@ -4033,14 +4033,18 @@ I18N.en.re = re;
 // I18N.en.content：各語言的內容（文法說明 HTML、練習題、例句翻譯…），英文介面時在建立資料前整段換掉（applyContent）。
 (() => {
 const E = I18N.en;
+E.gloss = E.gloss || {};
 // 把語言包（LX）和設定（LANGCFG）裡的中文字串，照 content（整段）或 dict 換成英文。
 // 單字的中文意思（第 5 欄）不換：意思用「單字意思」設定決定。
 E.applyContent = (IT, LC) => {
   const HAN = /[㐀-鿿]/, C = E.content, D = E.dict, seen = new Set();
   const tr = s => C[s] ?? D[s] ?? (C[s.trim()] != null ? s.replace(s.trim(), C[s.trim()]) : s);
+  // [外文, 中文] 這種一對（範例拆解的逐字意思、專有名詞…）先用 gloss（外文＋中文 → English），同一個中文在不同字可以翻得不一樣
+  const isPair = a => Array.isArray(a) && a.length === 2 && typeof a[0] === 'string' && typeof a[1] === 'string' && !HAN.test(a[0]) && HAN.test(a[1]);
   const walk = (o, depth) => {
     if (!o || typeof o !== 'object' || seen.has(o) || depth > 12) return;
     seen.add(o);
+    if (isPair(o)) { o[1] = E.gloss[o[0] + '\u0001' + o[1]] ?? tr(o[1]); return; }
     for (const k of Object.keys(o)) {
       const v = o[k];
       if (typeof v === 'string') { if (HAN.test(v)) o[k] = tr(v); }
@@ -4072,6 +4076,11 @@ const LD = {
 '時態': 'Tense', '動詞時態': 'Verb tense', '現在式': 'Present', '過去式': 'Past', '命令式': 'Imperative', '將來式': 'Future', '其他形：': 'Other forms: ',
 '放在名詞前面的形：': 'Form before a noun: ', '動詞變化': 'Verb forms', '陽→複數陰': 'm → f. in plural',
 '這個動詞通常不用完成式。': 'This verb isn’t usually used in the perfect.', '這個動詞沒有常用的命令式。': 'This verb has no common imperative.',
+// ---- 點字查詢的說明（各語言的引擎產生的）----
+'原形': 'base form', '單複數同形': 'same in singular and plural', '名詞前的縮短形': 'short form before a noun',
+'陽性單數': 'masculine singular', '陰性單數': 'feminine singular', '陽性複數': 'masculine plural', '陰性複數': 'feminine plural', '中性單數': 'neuter singular',
+'過去分詞': 'past participle', '過去分詞（陰性）': 'past participle (f.)', '過去分詞（陽性複數）': 'past participle (m. pl.)', '過去分詞（陰性複數）': 'past participle (f. pl.)',
+'反身動詞': 'Reflexive verb', '規則動詞': 'Regular verb',
 // ---- 上方、分頁、發音 ----
 '名詞上的性別標示': 'Gender marks on nouns', '名詞上的性別：開': 'Noun gender: on', '名詞上的性別：關': 'Noun gender: off',
 '名詞上方標出性別': 'Showing gender above nouns', '已隱藏性別，點單字可以看詞性': 'Gender hidden — tap a word to see its part of speech',
@@ -4141,6 +4150,11 @@ const N = x => NM[x] || x;
 const T = x => E.content[x] ?? E.dict[x] ?? x;
 const LNS = '(日語|日文|義大利文|西班牙文|德文|俄文|英文)';
 const RX = src => new RegExp(src.replace(/LN/g, LNS));
+R(/^「(.+)」的一部分$/, 'part of “$1”');
+R(/^(現在式|過去式|命令式|將來式|過去分詞|現在分詞|條件式) (.+)$/, (m, a, b) => `${E.dict[a] ?? a} ${b}`);
+R(/^原形（不加 (.+)）$/, 'base form (without $1)');
+R(/^過去式用 (.+)$/, 'past tense with $1');
+R(/^(.+?) 規則動詞$/, '$1 regular verb');
 R(/^(義|西|德|俄|英)→中$/, (m, a) => `${SH[a]} → meaning`);
 R(/^中→(義|西|德|俄|英)$/, (m, a) => `Meaning → ${SH[a]}`);
 R(RX('^歡迎使用LN (\\S+)$'), (m, a, l) => `Welcome to ${N(a)} ${l}`);
@@ -4197,7 +4211,7 @@ R(/^答對 (\d+) \/ (\d+) 題$/, '$1 / $2 correct');
 R(/^(\d+\/\d+) · 第\s?(\d+)級$/, '$1 · level $2');
 R(/^下次複習：(\S+)（第 (\d+) 級）$/, 'Next review: $1 (level $2)');
 R(/^已標記為學會，(\d+) 天後會再考一次$/, 'Marked as learned — it comes back in $1 days');
-R(/^(.+) · 單字$/, (m, a) => `${T(a)} · Word`);
+R(/^(.+) · 單字$/, (m, a) => `${E.dict[a] ?? T(a)} · Word`);
 R(/^(.+) 是「(.+)」，意思很接近，但這題要的是另一個字，再想想看。$/, '$1 means “$2” — close, but this one wants a different word. Try again.');
 R(/^（你寫的是 (.+)）$/, ' (you wrote $1)');
 R(/^例句裡找不到「(.+)」。如果這個字在例句裡有變化，請在「例句裡的寫法」填上例句裡的樣子。$/, '“$1” isn’t in the sentence. If it changes form there, enter that form in “Form used in the sentence”.');
@@ -4221,7 +4235,7 @@ const IT = window.LX || window.IT;
 const LC = window.LANGCFG;
 const LP = LC.id + ':';
 // 英文介面：建立資料前，先把語言包裡的中文內容（文法說明、練習題、例句翻譯…）照 <代碼>/i18n.js 換成英文（lang-i18n.js 的 I18N.applyContent）
-if (typeof I18N !== 'undefined' && I18N.applyContent && (store.get('n5:settings', {}) || {}).lang === 'en') I18N.applyContent(IT, LC);
+if (typeof I18N !== 'undefined' && I18N.en.applyContent && (store.get('n5:settings', {}) || {}).lang === 'en') I18N.en.applyContent(IT, LC);
 // 名詞性別的名稱（德文多一個中性），語言包沒給就用陽／陰
 const GEN = IT.GENDER || { m: ['陽性', '陽'], f: ['陰性', '陰'] };
 const genOf = g => GEN[g] || GEN.f || ['', ''];
@@ -4631,7 +4645,7 @@ function openWord(id) {
     : `<button class="btn quiet block" data-wa="reset">移回未學</button>`;
   const mineBtn = w.custom ? '<button class="btn quiet block" data-wa="edit">編輯或刪除這個字</button>' : '';
   const body = `<div class="rowx"><div class="grow"><div class="w1" lang="${LC.id}">${esc(w.title)}</div><div class="row" style="margin-top:6px"><span class="pos">${esc(POS_ZH[w.pos])}</span>${w.pos === 'n' && hasGen(w.e[2]) ? `<span class="pos ${w.e[2]}">${genOf(w.e[2])[0]}</span>` : ''}${tags.join('')}</div></div>${iconPlay(w.title, '播放單字')}</div>
-    <p class="mean-big">${esc(w.zh)}</p>${w.en ? `<div class="meta" style="margin-top:-8px">${esc(w.en)}</div>` : ''}
+    ${SET.mean === 'en' && w.en ? `<p class="mean-big">${esc(w.en)}</p>` : `<p class="mean-big">${esc(w.zh)}</p>${w.en ? `<div class="meta" style="margin-top:-8px">${esc(w.en)}</div>` : ''}`}
     ${formsHTML(w)}
     <div class="gp-title">例句</div>
     <div class="ex-row"><div class="sent sm" lang="${LC.id}">${sentHTML(w.sent)}</div>${iconPlay(w.sent, '播放例句')}</div><div class="zhline" style="margin-top:-6px">${esc(w.sentZh)}</div>
@@ -5203,7 +5217,7 @@ function ruleDemo(R) {
     return `<table class="t"><thead><tr><th>定冠詞</th><th>複數</th><th>不定冠詞</th></tr></thead><tbody>${R.demo.map(x => { const w = find(x, 'n'); return w ? w.e : extra[x]; }).filter(Boolean).map(e => { const f = IT.nounForms(e); return `<tr><td class="f" lang="${LC.id}">${esc(f.sg)}</td><td class="f" lang="${LC.id}">${esc(f.pl)}</td><td lang="${LC.id}">${esc(f.indef + (f.indef.endsWith("'") ? '' : ' ') + e[0])}</td></tr>`; }).join('')}</tbody></table>`;
   }
   if (R.id === 'r-adj') return `<div class="scroll-x"><table class="t"><thead><tr><th>陽單</th><th>陰單</th><th>陽複</th><th>陰複</th></tr></thead><tbody>${R.demo.map(x => find(x, 'adj')).filter(Boolean).map(w => '<tr>' + IT.adjForms(w.e).map(x => `<td class="f" lang="${LC.id}">${esc(x)}</td>`).join('') + '</tr>').join('')}</tbody></table></div>`;
-  return R.demo.map(x => find(x, 'v')).filter(Boolean).map(w => `<div class="rc-row" data-vk="${esc(w.id)}"><div class="rc-h"><b lang="${LC.id}">${esc(w.word)}</b><span class="meta">${esc(w.zh)}</span></div>${verbInfo(w)}
+  return R.demo.map(x => find(x, 'v')).filter(Boolean).map(w => `<div class="rc-row" data-vk="${esc(w.id)}"><div class="rc-h"><b lang="${LC.id}">${esc(w.word)}</b><span class="meta">${esc(meanPlain(w))}</span></div>${verbInfo(w)}
     <div class="seg" role="group" aria-label="時態 ${esc(w.word)}" style="margin:8px 0"><button data-tense="pres" aria-pressed="true">${esc(IT.conjugate(w.word, w.pos).presTab || '現在式')}</button><button data-tense="pass" aria-pressed="false">過去式</button><button data-tense="imp" aria-pressed="false">命令式</button></div><div class="vt">${conjTable(w, 'pres')}</div></div>`).join('');
 }
 // ================= 文法範例拆解＋練習題（IT.GX） =================
@@ -5481,7 +5495,7 @@ const PAGE = {
       if (R.mode === 'verb') {
         const w = item, q = IT.makeVerbQuestion(w.e);
         renderChoice(host, {
-          head, promptHTML: `<div class="mid" lang="${LC.id}">${esc(q.subj)} ＋ ${esc(w.word)}</div><span class="meta">${esc(q.label || (q.tense === 'passato' ? LC.pastLabel : '現在式'))}・${esc(w.zh)}</span>`,
+          head, promptHTML: `<div class="mid" lang="${LC.id}">${esc(q.subj)} ＋ ${esc(w.word)}</div><span class="meta">${esc(q.label || (q.tense === 'passato' ? LC.pastLabel : '現在式'))}・${esc(meanPlain(w))}</span>`,
           options: q.options.map(o => ({ html: esc(o), correct: o === q.answer, lang: LC.id })),
           onAnswer: ok => { if (ok) R.right++; R.done = true; record(w, 'mc', ok, src); },
           afterHTML: () => `<div class="hint"><span>正確答案：<b lang="${LC.id}">${esc(q.answer)}</b></span><button class="linkbtn" data-word="${esc(w.id)}" style="align-self:flex-start">看完整變化表</button></div>`
