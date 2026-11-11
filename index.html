@@ -626,12 +626,6 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .myform input:focus,.myform textarea:focus{border-color:var(--pri);outline:none}
 .myform .btnrow{margin-top:10px}
 .myform .btnrow.one{grid-template-columns:1fr}
-/* 我的造句（單字頁） */
-.usbox{display:flex;flex-direction:column;gap:8px}
-.mysents{display:flex;flex-direction:column;gap:8px}
-.mysent{border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface);display:flex;flex-direction:column;gap:2px}
-.mysent .linkbtn{align-self:flex-end;min-height:32px}
-.usform .btn{min-height:44px}
 /* 查字典的結果（shared/mine.js） */
 .dictbox{display:flex;flex-direction:column;gap:6px;border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--surface2)}
 .dictbox .chips{flex-wrap:wrap}
@@ -2866,9 +2860,9 @@ const D = {
 '注意：「いい」變化時要換成「よ」：よかった、よくない、よくて。': 'Note: いい changes to よ: よかった, よくない, よくて.', '注意：「': 'Note: “',
 '」雖然是 い段或え段＋る 結尾，看起來像二類，但其實是一類動詞，要特別記住。': '” ends in an i-row or e-row sound + る and looks like group 2, but it is actually a group 1 verb — remember it.',
 '〜です': '〜です', '過去否定': 'Past negative', '副詞': 'Adverb', '＋に': '+ に',
-// ---- 我的單字、查字典、我的造句 ----
+// ---- 我的單字、查字典 ----
 '＋ 新增自己的單字': '+ Add your own word', '新增自己的單字': 'Add your own word', '編輯我的單字': 'Edit my word',
-'我的單字': 'My words', '我的造句': 'My sentences', '清單（待考、已學會、錯題、我的單字、我的造句）': 'Lists (to test, learned, mistakes, My words, My sentences)',
+'我的單字': 'My words', '清單（待考、已學會、錯題、我的單字）': 'Lists (to test, learned, mistakes, My words)',
 '讀音（假名）': 'Reading (kana)', '意思': 'Meaning', '更多：例句（可以不填）': 'More: example sentence (optional)', '例句': 'Example sentence', '例句的中文': 'Sentence translation',
 '例句的讀法（整句用平假名；填了例句的漢字才有振り仮名）': 'Sentence reading (the whole sentence in hiragana; adds furigana to its kanji)',
 '例句裡的寫法（通常不用填，App 會自己找；找錯了再填）': 'Form used in the sentence (usually not needed — the app finds it; fill in only if it picks the wrong one)',
@@ -2881,14 +2875,11 @@ const D = {
 '「例句的讀法」和例句對不起來。請把整句用平假名寫一次（片假名和標點照原樣），或先留空。': '“Sentence reading” doesn’t match the sentence. Write the whole sentence in hiragana (keep katakana and punctuation as they are), or leave it empty.',
 '專有名詞': 'Proper noun', '介係詞': 'Preposition', '代名詞': 'Pronoun', '連接詞': 'Conjunction', '感嘆詞': 'Interjection', '限定詞': 'Determiner', '冠詞': 'Article', '數詞': 'Numeral',
 '片語': 'Phrase', '慣用語': 'Idiom', '介係詞片語': 'Prepositional phrase', '諺語': 'Proverb',
-'造句': 'Write a sentence', '用這個字造句': 'Write a sentence with this word', '存起來': 'Save', '播放我的句子': 'Play my sentence',
-'用這個字自己寫一個句子，寫過比較記得住。App 不會批改，寫完可以按喇叭聽聽看。': 'Write your own sentence with this word — it helps you remember. The app doesn’t correct it; tap the speaker to hear it.',
-'這句已經存過了': 'You already saved this sentence', '已存到我的造句': 'Saved to My sentences', '查看': 'View',
 };
 const re = [];
 const t = s => I18N.en.dict[s] ?? s;
 const R = (r, f) => re.push([r, f]);
-// 我的單字、查字典、我的造句
+// 我的單字、查字典
 R(/^單字或片語（(.+)）$/, (m, a) => `Word or phrase (${t(a)})`);
 R(/^單字庫裡本來就有「(.+)」，用上面的搜尋就找得到。$/, '“$1” is already in the word list — search for it above.');
 R(/^你已經新增過「(.+)」了。$/, 'You already added “$1”.');
@@ -2902,14 +2893,6 @@ R(/^「(.+)」在例句裡要是完整的一段（不能切在一個漢字詞的
 R(/^「(.+)」有漢字，填空要知道它怎麼唸：請填「例句的讀法」。$/, '“$1” has kanji, so fill-in needs its reading — please fill in “Sentence reading”.');
 R(/^查字典並把「(.+)」加到我的單字$/, 'Look up “$1” and add it to My words');
 R(/^查字典並加到我的單字$/, 'Look it up and add to My words');
-R(/^用這個字造句（(\d+)）$/, 'Write a sentence with this word ($1)');
-R(/^我的造句（(\d+)）$/, 'My sentences ($1)');
-R(/^我的造句 (.+)$/, 'My sentences: $1');
-R(/^(\d+) 句$/, (m, n) => n + (n === '1' ? ' sentence' : ' sentences'));
-R(/^每個字最多存 (\d+) 句，要再寫請先刪掉舊的。$/, 'You can save up to $1 sentences per word. Delete an old one to add more.');
-R(/^用「(.+)」造一個句子$/, 'Write a sentence with “$1”');
-R(/^用「(.+)」造句$/, 'Write a sentence with “$1”');
-R(/^已存起來（句子裡沒看到「(.+)」，要不要再檢查一下？）$/, 'Saved (but “$1” isn’t in the sentence — want to check it?)');
 R(/^目前是(.+)，點一下切換語言$/, (m, a) => `Current: ${t(a)} — tap to switch language`);
 R(/^今日 (\d+)\/(\d+) 題( ✓)?$/, 'Today $1/$2$3');
 R(/^今天的 (\d+) 題完成了！$/, 'Today’s $1 questions done!');
@@ -4318,7 +4301,6 @@ function wordPool(src) {
     fillWrong: w => wrongOf(w.id, 'fill') === 1,
     fillReview: w => wrongOf(w.id, 'fill') === 2,
     mine: w => !!w.custom,
-    sent: w => mySents(w.id).length > 0,
     dictWrong: w => wrongOf(w.id, 'dict') === 1,
     excluded: w => getRec(w.id).s === 'excluded'
   }[src];
@@ -4355,7 +4337,7 @@ function openGloss(el) {
     ${romajiLine(info.romaji)}
     <div class="gl-zh"><span class="pos">${esc(info.pos)}</span> ${info.w ? meanW(info.w) : esc(info.zh)}</div>
     ${surface && surface !== info.word && form ? `<div class="meta">句中的「<span class="ja">${esc(surface)}</span>」：${esc(form)}</div>` : ''}
-    <div class="row">${playBtn(info.reading, '發音')}${info.w && info.w.pg !== '文法' ? `<button class="btn quiet" data-forms="${esc(info.w.id)}" style="min-height:44px">${info.w.custom ? '編輯' : '變化形・詞性'}</button><button class="btn quiet" data-sents="${esc(info.w.id)}" style="min-height:44px">造句</button>` : ''}${r ? `<span class="st ${r.s}">${STATUS_TXT[r.s] || '未學'}</span>` : ''}${r && (r.s === 'new' || r.s === 'excluded') ? `<button class="btn" id="glQ" style="min-height:44px">列入考題</button>` : ''}</div>`;
+    <div class="row">${playBtn(info.reading, '發音')}${info.w && info.w.pg !== '文法' ? `<button class="btn quiet" data-forms="${esc(info.w.id)}" style="min-height:44px">${info.w.custom ? '編輯' : '變化形・詞性'}</button>` : ''}${r ? `<span class="st ${r.s}">${STATUS_TXT[r.s] || '未學'}</span>` : ''}${r && (r.s === 'new' || r.s === 'excluded') ? `<button class="btn" id="glQ" style="min-height:44px">列入考題</button>` : ''}</div>`;
   p.hidden = false;
   $('.gl-x', p).onclick = closeGloss;
   const q = $('#glQ', p);
@@ -4493,8 +4475,6 @@ function formExamplesHTML(w, row) {
   return parts.join('') || '<p class="meta">還沒有這個形的例句。</p>';
 }
 document.addEventListener('click', e => {
-  const us = e.target.closest('[data-sents]');
-  if (us) { e.preventDefault(); e.stopPropagation(); closeGloss(); return openSents(us.dataset.sents); }
   const am = e.target.closest('[data-addmine]');
   if (am) { e.preventDefault(); closeGloss(); return editMine('', am.dataset.addmine, true); }
   const fm = e.target.closest('[data-forms]');
@@ -5336,15 +5316,6 @@ const Sheet = {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && Sheet.isOpen()) { e.stopPropagation(); Sheet.close(); } }, true);
 // @end shared/sheet.js
 const PAGE = {
-  // 我的造句（shared/sents.js）：日文頁沒有單字詳細頁，用 openSents 的面板
-  sents: {
-    lang: 'ja', html: t => esc(t),
-    // 句子裡有沒有這個字：原形、假名寫法，或斷詞後認得的變化形（食べる → 食べました）
-    uses: (t, w) => t.includes(w.word) || t.includes(w.reading) || (() => { const g = rawSegs(t); return tokenizeSegs(g, 0, g.length, GLOSS).some(k => k.e === w.id); })(),
-    changed: () => { if (UI.tab === 'lib') renderLib(); if (UI.tab === 'card') renderCard(); },
-    open: id => openSents(id),
-    head: w => `<div class="row" style="align-items:center;gap:12px;flex-wrap:nowrap"><div style="flex:1;min-width:0"><div class="gl-word" lang="ja">${wordHTML(w)}</div><div class="meta">${meanW(w)}</div></div>${iconPlay(w.reading, '播放單字')}</div>`
-  },
   mine: {
     prefix: MY, lang: 'ja', name: '日文', dict: 'ja', readings: true, meanEn: LANG === 'en',
     builtin: word => WORDS.find(w => !w.custom && w.kind === 'w' && w.word === word),
@@ -5485,7 +5456,7 @@ const PAGE = {
     afterHead: w => grammarPanel(w),
     word: w => `<div class="word-row"><div class="word" lang="ja">${wordHTML(w)}</div>${iconPlay(w.reading, '播放單字')}</div>
     <div class="sub">${romajiLine(w.romaji)}</div>`,
-    afterMean: w => w.pg === '文法' ? '' : `<button class="linkbtn" data-sents="${esc(w.id)}" style="align-self:center">用這個字造句${mySents(w.id).length ? `（${mySents(w.id).length}）` : ''}</button>`,
+    afterMean: () => '',
     bind: host => bindGrammar(host)
   },
   lib: {
@@ -5531,13 +5502,12 @@ const PAGE = {
 //   syncNote 同步說明、expNote(n) 匯出後的說明、impNote 匯入說明、impKeep(id) 匯入時要收的紀錄、
 //   impToast(n) 匯入完成訊息、wordCell(w) 清單裡的單字、bind(host) 綁定 langHTML／extraHTML 的按鈕、
 //   resetRounds() 換每輪題數時要清掉的其他回合、onEntryMc() 從入口進單選前要做的事、
-// 頁面有 PAGE.sents 才顯示「我的造句」清單（wordPool('sent')：寫過句子的字；點進去在單字頁看和改）
 // 頁面有 PAGE.mine 才顯示「新增自己的單字」和「我的單字」清單（表單 editMine 在 shared/mine.js）
 let libList = 'queued';
 const entryBtn = (tab, src, title, n) => `<button data-go="${tab}:${src}"${n ? '' : ' class="zero"'}><span>${title}</span><b>${n}</b></button>`;
 function libCounts() {
   const t = today(), rset = recentIds();
-  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0, mine: 0, sent: 0 };
+  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0, mine: 0 };
   for (const w of WORDS) {
     const r = getRec(w.id);
     if (r.s === 'learned') { c.learned++; if (r.due && r.due <= t) c.dueAll++; }
@@ -5545,7 +5515,6 @@ function libCounts() {
     if (r.s === 'excluded') c.excluded++;
     if (rset.has(w.id)) c.recent++;
     if (w.custom) c.mine++;
-    if (r.u && r.u.length) c.sent++;
     const ww = r.w || {};
     if (ww.mc === 1) c.mcW++; if (ww.mc === 2) c.mcR++;
     if (ww.fill === 1) c.fillW++; if (ww.fill === 2) c.fillR++;
@@ -5572,8 +5541,8 @@ function renderLib() {
     <div class="results" id="results"></div>
     ${PAGE.mine ? '<button class="btn quiet block" id="addMine">＋ 新增自己的單字</button>' : ''}
     ${ents.length ? `<div class="entry">${ents.map(x => entryBtn(...x)).join('')}</div>` : '<p class="meta" style="margin:0">目前沒有要複習的題目。練習時答錯的字、到期的字會出現在這裡。</p>'}
-    <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題${PAGE.mine ? '、我的單字' : ''}${PAGE.sents ? '、我的造句' : ''}）</summary>
-      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : [], PAGE.sents ? [['sent', '我的造句', c.sent]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
+    <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題${PAGE.mine ? '、我的單字' : ''}）</summary>
+      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
       <div class="lrows"></div>
     </details>
     <details class="lst"${Cloud.mode === 'google' && !Cloud.user ? ' open' : ''}><summary>設定<span class="n sync${Cloud.ref ? ' on' : ''}" id="syncState"><i></i><span>${esc(Cloud.chip())}</span></span></summary>
@@ -5677,16 +5646,15 @@ function fillList(d) {
   if (key === 'learned') arr = arr.slice().sort((a, b) => (getRec(a.id).due || '').localeCompare(getRec(b.id).due || ''));
   const box = $('.lrows', d);
   if (!arr.length) { box.innerHTML = '<div class="lrow"><span class="z">目前是空的</span></div>'; return; }
-  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復', mine: '編輯', sent: '查看' }[key];
+  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復', mine: '編輯' }[key];
   box.innerHTML = arr.map(w => {
     const r = getRec(w.id);
     const dd = key === 'learned' ? `<span class="d">${r.due ? r.due.slice(5).replace('-', '/') : ''} · 第${(r.lv || 0) + 1}級</span>` : '';
-    return `<div class="lrow">${PAGE.lib.wordCell(w)}<span class="z">${meanW(w)}</span>${dd}<button data-id="${esc(w.id)}">${key === 'sent' ? (r.u || []).length + ' 句' : act}</button></div>`;
+    return `<div class="lrow">${PAGE.lib.wordCell(w)}<span class="z">${meanW(w)}</span>${dd}<button data-id="${esc(w.id)}">${act}</button></div>`;
   }).join('');
   $$('button[data-id]', box).forEach(b => b.onclick = () => {
     const id = b.dataset.id, r = getRec(id);
     if (key === 'mine') return editMine(id);
-    if (key === 'sent') return PAGE.sents.open(id);
     if (key === 'queued') touch(id, { s: 'new' });
     else if (key === 'learned') touch(id, { s: 'new', lv: 0, due: '' });
     else if (key === 'excluded') touch(id, { s: 'new' });
@@ -5696,52 +5664,6 @@ function fillList(d) {
   });
 }
 // @end shared/lib-tab.js
-// @include shared/sents.js（我的造句）
-// ================= 我的造句（日文頁和語言頁共用：n5src/shared/sents.js） =================
-// 自己用這個字寫的句子，存在這個字的進度紀錄 u = [{ s 句子, t 時間 }]（跟著合併和 Google 同步；備份碼不含）
-// 各頁不一樣的地方在 PAGE.sents：
-//   lang 語言代碼、html(句子) 句子怎麼顯示、uses(句子, w) 句子裡有沒有用到這個字、
-//   changed() 存檔或刪除後更新畫面、open(id) 從單字庫清單點進去時打開哪裡、head(w)（openSents 用）面板上方的單字
-const MAX_SENTS = 20;
-const mySents = id => (getRec(id).u || []).filter(x => x && x.s);
-function sentBoxHTML(w) {
-  const list = mySents(w.id);
-  return `<div class="gp-title">我的造句${list.length ? `（${list.length}）` : ''}</div>
-    ${list.length ? `<div class="mysents">${list.map((x, i) => `<div class="mysent"><div class="ex-row"><div class="sent sm" lang="${PAGE.sents.lang}">${PAGE.sents.html(x.s)}</div>${iconPlay(x.s, '播放我的句子')}</div><button class="linkbtn" data-usdel="${i}">刪除</button></div>`).join('')}</div>` : '<p class="meta" style="margin:0">用這個字自己寫一個句子，寫過比較記得住。App 不會批改，寫完可以按喇叭聽聽看。</p>'}
-    ${list.length >= MAX_SENTS ? `<p class="meta" style="margin:0">每個字最多存 ${MAX_SENTS} 句，要再寫請先刪掉舊的。</p>` : `<form class="myform usform" id="usForm" autocomplete="off">
-      <textarea id="usIn" lang="${PAGE.sents.lang}" rows="2" maxlength="300" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="用「${esc(w.word)}」造一個句子" aria-label="用「${esc(w.word)}」造句"></textarea>
-      <button class="btn" type="submit">存起來</button>
-    </form>`}`;
-}
-function bindSentBox(box, w) {
-  box.innerHTML = sentBoxHTML(w);
-  const redraw = () => { bindSentBox(box, w); PAGE.sents.changed(); };
-  const form = $('#usForm', box);
-  if (form) form.onsubmit = e => {
-    e.preventDefault();
-    const txt = $('#usIn', box).value.trim().replace(/\s+/g, ' ');
-    if (!txt) return $('#usIn', box).focus();
-    reloadShared();
-    const list = mySents(w.id);
-    if (list.some(x => x.s === txt)) return toast('這句已經存過了');
-    touch(w.id, { u: list.concat({ s: txt, t: Date.now() }).slice(-MAX_SENTS) });
-    toast(PAGE.sents.uses(txt, w) ? '已存到我的造句' : `已存起來（句子裡沒看到「${w.word}」，要不要再檢查一下？）`);
-    redraw();
-  };
-  $$('[data-usdel]', box).forEach(b => b.onclick = () => {
-    if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '確定刪除？'; return; }
-    reloadShared();
-    const list = mySents(w.id); list.splice(+b.dataset.usdel, 1);
-    touch(w.id, { u: list }); toast('已刪除'); redraw();
-  });
-}
-// 只有造句的面板（日文頁沒有單字詳細頁，從點字的小框、搜尋結果、字卡、清單進來）
-function openSents(id) {
-  const w = WMAP[id]; if (!w) return;
-  const el = Sheet.open('我的造句', PAGE.sents.head(w) + '<div id="usBox" class="usbox"></div>', '我的造句 ' + w.word);
-  bindSentBox($('#usBox', el), w);
-}
-// @end shared/sents.js
 // @include shared/dict.js（線上查字典）
 // ================= 線上查字典（n5src/shared/dict.js） =================
 // 給「我的單字」表單用：查英文解釋（英文版 Wiktionary 的 REST API，依語言分好）和中文翻譯（MyMemory，機器翻譯）。
@@ -5951,7 +5873,7 @@ function doSearch(qs) {
       <div class="row"><span class="st ${r.s}">${STATUS_TXT[r.s] || '未學'}</span><span class="meta">作答 ${r.n || 0} 次</span></div>
       <div class="sent" lang="ja">${sentHTML(w)}</div>
       <div class="meta" style="color:var(--fg)">${esc(w.sentZh)}</div>
-      <div class="row">${playBtn(w.reading, '單字')}${playBtn(w.sent, '例句')}${canQ ? `<button class="btn" data-q="${esc(w.id)}" style="min-height:44px">列入考題</button>` : ''}${w.pg === '文法' ? '' : `<button class="btn quiet" data-sents="${esc(w.id)}" style="min-height:44px">造句</button>`}</div>
+      <div class="row">${playBtn(w.reading, '單字')}${playBtn(w.sent, '例句')}${canQ ? `<button class="btn" data-q="${esc(w.id)}" style="min-height:44px">列入考題</button>` : ''}</div>
     </div>`;
   }).join('');
   $$('[data-q]', box).forEach(b => b.onclick = () => { touch(b.dataset.q, { s: 'queued' }); toast('已列入考題'); doSearch($('#q').value); });
