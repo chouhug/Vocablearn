@@ -3824,46 +3824,12 @@ function formsHTML(w) {
   if (e[3] && e[3] !== '-') return `<div>其他形：<span lang="${LC.id}">${esc(e[3].split('/').join('、'))}</span></div>`;
   return '';
 }
-// ---- 我的造句：自己用這個字寫的句子，存在這個字的進度紀錄 u = [{ s 句子, t 時間 }]（跟著合併和 Google 同步；備份碼不含）----
-const MAX_SENTS = 20;
-const mySents = id => (getRec(id).u || []).filter(x => x && x.s);
 // 句子裡有沒有用到這個字（原形或 App 認得的變化形）
 function usesWord(sentence, w) {
   const ks = IT.tokenize(sentence).filter(t => t.w).map(t => IT.norm(t.t).toLowerCase());
   const parts = IT.tokenize(w.word).filter(t => t.w).map(t => IT.norm(t.t).toLowerCase());
   if (parts.length && parts.every(p => ks.includes(p))) return true;
   return !w.custom && ks.some(k => (LOOK.get(k) || []).some(x => x.idx >= 0 && idOfEntry(IT.W[x.idx]) === w.id));
-}
-function sentBoxHTML(w) {
-  const list = mySents(w.id);
-  return `<div class="gp-title">我的造句${list.length ? `（${list.length}）` : ''}</div>
-    ${list.length ? `<div class="mysents">${list.map((x, i) => `<div class="mysent"><div class="ex-row"><div class="sent sm" lang="${LC.id}">${sentHTML(x.s)}</div>${iconPlay(x.s, '播放我的句子')}</div><button class="linkbtn" data-usdel="${i}">刪除</button></div>`).join('')}</div>` : '<p class="meta" style="margin:0">用這個字自己寫一個句子，寫過比較記得住。App 不會批改，寫完可以按喇叭聽聽看。</p>'}
-    ${list.length >= MAX_SENTS ? `<p class="meta" style="margin:0">每個字最多存 ${MAX_SENTS} 句，要再寫請先刪掉舊的。</p>` : `<form class="myform usform" id="usForm" autocomplete="off">
-      <textarea id="usIn" lang="${LC.id}" rows="2" maxlength="300" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="用「${esc(w.word)}」造一個句子" aria-label="用「${esc(w.word)}」造句"></textarea>
-      <button class="btn" type="submit">存起來</button>
-    </form>`}`;
-}
-function bindSentBox(box, w) {
-  box.innerHTML = sentBoxHTML(w);
-  const redraw = () => { bindSentBox(box, w); if (UI.tab === 'lib') refreshPassive(true); };
-  const form = $('#usForm', box);
-  if (form) form.onsubmit = e => {
-    e.preventDefault();
-    const txt = $('#usIn', box).value.trim().replace(/\s+/g, ' ');
-    if (!txt) return $('#usIn', box).focus();
-    reloadShared();
-    const list = mySents(w.id);
-    if (list.some(x => x.s === txt)) return toast('這句已經存過了');
-    touch(w.id, { u: list.concat({ s: txt, t: Date.now() }).slice(-MAX_SENTS) });
-    toast(usesWord(txt, w) ? '已存到我的造句' : `已存起來（句子裡沒看到「${w.word}」，要不要再檢查一下？）`);
-    redraw();
-  };
-  $$('[data-usdel]', box).forEach(b => b.onclick = () => {
-    if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '確定刪除？'; return; }
-    reloadShared();
-    const list = mySents(w.id); list.splice(+b.dataset.usdel, 1);
-    touch(w.id, { u: list }); toast('已刪除'); redraw();
-  });
 }
 const STATUS_TXT = { new: '未學', queued: '待考', learned: '已學會', excluded: '已排除' };
 function openWord(id) {
@@ -4804,7 +4770,8 @@ const PAGE = {
     afterMean: w => { const fl = formsLine(w); return fl ? `<div class="forms">${fl}</div>` : ''; },
     bind: () => {}
   },
-  sents: true,   // 單字頁有「我的造句」，單字庫清單多一個「我的造句」
+  // 單字頁有「我的造句」（shared/sents.js），單字庫清單多一個「我的造句」
+  sents: { lang: LC.id, html: t => sentHTML(t), uses: (t, w) => usesWord(t, w), changed: () => { if (UI.tab === 'lib') refreshPassive(true); }, open: id => openWord(id) },
   mine: {
     prefix: MY, lang: LC.id, name: LC.name, dict: LC.id,
     posOpts: [['o', '其他'], ['n', '名詞'], ['v', '動詞'], ['adj', '形容詞']],
@@ -5019,7 +4986,7 @@ function fillList(d) {
   $$('button[data-id]', box).forEach(b => b.onclick = () => {
     const id = b.dataset.id, r = getRec(id);
     if (key === 'mine') return editMine(id);
-    if (key === 'sent') return openWord(id);
+    if (key === 'sent') return PAGE.sents.open(id);
     if (key === 'queued') touch(id, { s: 'new' });
     else if (key === 'learned') touch(id, { s: 'new', lv: 0, due: '' });
     else if (key === 'excluded') touch(id, { s: 'new' });
@@ -5027,6 +4994,50 @@ function fillList(d) {
     b.closest('.lrow').remove();
     const n = $(`[data-list="${key}"] .n`, d); if (n) n.textContent = Math.max(0, +n.textContent - 1);
   });
+}
+// ================= 我的造句（日文頁和語言頁共用：n5src/shared/sents.js） =================
+// 自己用這個字寫的句子，存在這個字的進度紀錄 u = [{ s 句子, t 時間 }]（跟著合併和 Google 同步；備份碼不含）
+// 各頁不一樣的地方在 PAGE.sents：
+//   lang 語言代碼、html(句子) 句子怎麼顯示、uses(句子, w) 句子裡有沒有用到這個字、
+//   changed() 存檔或刪除後更新畫面、open(id) 從單字庫清單點進去時打開哪裡、head(w)（openSents 用）面板上方的單字
+const MAX_SENTS = 20;
+const mySents = id => (getRec(id).u || []).filter(x => x && x.s);
+function sentBoxHTML(w) {
+  const list = mySents(w.id);
+  return `<div class="gp-title">我的造句${list.length ? `（${list.length}）` : ''}</div>
+    ${list.length ? `<div class="mysents">${list.map((x, i) => `<div class="mysent"><div class="ex-row"><div class="sent sm" lang="${PAGE.sents.lang}">${PAGE.sents.html(x.s)}</div>${iconPlay(x.s, '播放我的句子')}</div><button class="linkbtn" data-usdel="${i}">刪除</button></div>`).join('')}</div>` : '<p class="meta" style="margin:0">用這個字自己寫一個句子，寫過比較記得住。App 不會批改，寫完可以按喇叭聽聽看。</p>'}
+    ${list.length >= MAX_SENTS ? `<p class="meta" style="margin:0">每個字最多存 ${MAX_SENTS} 句，要再寫請先刪掉舊的。</p>` : `<form class="myform usform" id="usForm" autocomplete="off">
+      <textarea id="usIn" lang="${PAGE.sents.lang}" rows="2" maxlength="300" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="用「${esc(w.word)}」造一個句子" aria-label="用「${esc(w.word)}」造句"></textarea>
+      <button class="btn" type="submit">存起來</button>
+    </form>`}`;
+}
+function bindSentBox(box, w) {
+  box.innerHTML = sentBoxHTML(w);
+  const redraw = () => { bindSentBox(box, w); PAGE.sents.changed(); };
+  const form = $('#usForm', box);
+  if (form) form.onsubmit = e => {
+    e.preventDefault();
+    const txt = $('#usIn', box).value.trim().replace(/\s+/g, ' ');
+    if (!txt) return $('#usIn', box).focus();
+    reloadShared();
+    const list = mySents(w.id);
+    if (list.some(x => x.s === txt)) return toast('這句已經存過了');
+    touch(w.id, { u: list.concat({ s: txt, t: Date.now() }).slice(-MAX_SENTS) });
+    toast(PAGE.sents.uses(txt, w) ? '已存到我的造句' : `已存起來（句子裡沒看到「${w.word}」，要不要再檢查一下？）`);
+    redraw();
+  };
+  $$('[data-usdel]', box).forEach(b => b.onclick = () => {
+    if (!b.dataset.sure) { b.dataset.sure = '1'; b.textContent = '確定刪除？'; return; }
+    reloadShared();
+    const list = mySents(w.id); list.splice(+b.dataset.usdel, 1);
+    touch(w.id, { u: list }); toast('已刪除'); redraw();
+  });
+}
+// 只有造句的面板（日文頁沒有單字詳細頁，從點字的小框、搜尋結果、字卡、清單進來）
+function openSents(id) {
+  const w = WMAP[id]; if (!w) return;
+  const el = Sheet.open('我的造句', PAGE.sents.head(w) + '<div id="usBox" class="usbox"></div>', '我的造句 ' + w.word);
+  bindSentBox($('#usBox', el), w);
 }
 // ================= 線上查字典（n5src/shared/dict.js） =================
 // 給「我的單字」表單用：查英文解釋（英文版 Wiktionary 的 REST API，依語言分好）和中文翻譯（MyMemory，機器翻譯）。
