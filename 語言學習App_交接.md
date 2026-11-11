@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v94'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v95'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -74,8 +74,9 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - `shared/fill-tab.js`：填空分頁的流程（fillRound、FILL_SRCS、renderFill、nextFillQ、scrollFillTop）：選題、送出、判斷、記錄、音效、下一題、手機鍵盤。題目本身由 `PAGE.fill.make(w, R)` 產生（日文：振り仮名、羅馬拼音、假名即時轉換、checkFill；語言頁：answerSpan、重音提醒 markDiff、同義字 synonymOf、答完念例句）。日文的聽寫（renderDict、nextDictQ）還在 index.html，用 `PAGE.fill.alt()` 切過去。
   - `shared/mc-tab.js`：單選分頁的回合管理（mcRound、MC_SRCS、renderMC、nextMCQ）、三種基本題型（看單字選意思、看意思選單字、聽發音選意思），和 emptyWords（沒有題目時的提示，單選、填空、聽寫共用）。一輪的設定用 `PAGE.mc.roundKey()` 判斷（設定變了就重新出題）。特殊題型留在各頁：日文的漢字讀音（nextReadQ）、助詞（nextPartQ）、詞性變化（nextConjQ），語言頁的冠詞／格與性別、介係詞練習句、動詞變化（在 PAGE.mc.question 和 special 裡）。日文頁換日→中／中→日／聽→中會接著同一輪（resetOnMode: false），語言頁換題型會重新出題。
   - `shared/gram-tab.js`：文法關卡（gxKey、gxNeed、gxStages、gxNext、gxRecord、gxPathHTML、gxWhere）、練習題流程（startGxQuiz）、文法點頁（renderGramPoint：說明／看範例／練習題、例句卡片）、openGram 和 data-gram 的點擊。文法列表、變化規則頁、範例拆解（gxExamplesHTML）還是各頁自己的；一題練習題怎麼畫在 `PAGE.gram.quizQ`。gramPane、gramPaneId、gramShow 由各頁宣告。
+  - `shared/sheet.js`：拉起式面板 Sheet（open、close、isOpen）。
   - `shared/dict.js`：線上查字典（給 mine.js 的表單用）。
-  - `shared/mine.js`：「我的單字」的新增／編輯表單（editMine）。頁面有 `PAGE.mine` 才會出現入口（prefix、lang、name、posOpts、builtin、check、changed）。目前只有語言頁有，日文頁還沒接。
+  - `shared/mine.js`：「我的單字」的新增／編輯表單（editMine）。頁面有 `PAGE.mine` 才會出現入口（prefix、lang、name、posOpts、builtin、check、changed）。語言頁和日文頁都有。
   - `shared/tour.js`：首次使用導覽（Tour），各頁的步驟和文字在 `PAGE.tour`。
   - `shared/voice.js`：Voice（讀語音、挑聲音、念）和設定裡的語音區 renderVoiceBox。各語言怎麼挑聲音在 `PAGE.voice`（日文會避開 Ichiro、Haruka 這類很機械的舊語音；語言頁看語言代碼、Google 語音和 config.js 的 voiceNames）。`Voice.speak(text, voiceOverride, rate)`。
 - 每個語言有自己的背景插畫（義大利：絲柏、托斯卡尼小鎮；西班牙：風車、橄欖樹；德國：阿爾卑斯雪山、城堡、桁架屋、冷杉；俄羅斯：洋蔥頂教堂、白樺樹、木屋；英文：鐘樓、拱橋、雙層巴士）。
@@ -127,6 +128,14 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **日文頁的我的單字＋查字典**：日文頁（index.html）的單字庫也有「＋ 新增自己的單字」、清單「我的單字」、搜尋不到時的「查字典並把…加到我的單字」。
+  - 表單比語言頁多兩欄：**讀音**（假名；單字有漢字一定要填，全假名的字不用）和**例句的讀法**（整句用平假名，可以不填）；沒有詞性欄（日文的詞性會牽動變化表，自己的字一律是「我的單字」，沒有變化形，點詞性按鈕會直接開編輯）。
+  - 例句沒填讀法時：這個字本身照它的讀音標振り仮名，其他漢字照樣顯示但不標、拼音略過（seg 的 `r` 是空字串），這種字不出聽寫（`w.noR`）。字在例句裡有變化（剃る → 剃ります）而且有漢字時，一定要填例句的讀法，填空才知道答案怎麼唸。
+  - 程式：ja/app.js 的 `myWord(id, c)`（把定義變成和內建單字一樣的資料，內容有問題回傳 `{ err }`，表單的檢查也用它）、`syncMine()`、`PAGE.mine`（readings: true、dict: 'ja'）。id 是 `v:my:單字`（v: 開頭，點字的小框才認得）。自己的字不出助詞題、不進文法例句和文法補充。
+  - 為了讓日文頁能用表單，Sheet（拉起式面板）從 lang-app.js 搬到 `n5src/shared/sheet.js`，兩邊共用；`.sheet-body`、`.hl-warn` 的樣式在 base.css 也放了一份。mine.js 多了 `PAGE.mine.readings`、`posOpts` 可以不給。
+  - 測試：`node n5src/mine-ja-e2e.js n5work`（要 playwright 和 Chrome，字典用假的回應）。日文的線上字典還沒用真的網路查過（英、德、俄、義、西查過，用的是同一支程式）。
+  - 日文頁還沒有「我的造句」。English 介面下，這些新畫面還是中文。
+
 - **線上查字典**（義、西、德、俄、英頁）：「新增自己的單字」表單的單字欄下面多了「查字典」。會列出中文翻譯（MyMemory，機器翻譯，可能不準）和英文解釋（英文版 Wiktionary，依詞性分），點一下就填進「意思」（已經有字就用「；」接在後面），詞性還沒選時照字典自動選。搜尋不到、點例句的字查不到時的按鈕改成「查字典並加到我的單字」，打開表單就自動查一次。
   - 程式在 `n5src/shared/dict.js`（dictLookup、dictFetch、dictText、DICT_POS；不用頁面變數，只用 fetch），表單在 shared/mine.js；頁面設 `PAGE.mine.dict = 語言代碼` 才有。
   - 用的服務（都不用金鑰、允許網頁直接連）：`https://en.wiktionary.org/api/rest_v1/page/definition/<字>`（回傳依語言代碼分組，條目分大小寫，所以照打的、全小寫、首字大寫各試一次）和 `https://api.mymemory.translated.net/get?q=<字>&langpair=<語言>|zh-TW`（沒登記的免費額度每天約 5000 個字元）。只有按「查字典」時才會把那個字送出去；沒網路會顯示連不上，意思還是可以自己填。sw.js 不快取這些連線。
@@ -136,7 +145,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - 存法：放在這個字的進度紀錄 `S.items[id].u = [{ s 句子, t 時間 }]`（每個字最多 20 句），和「我的單字」一樣直接跟著合併和 Google 同步；**備份碼不含**。寫句子不會改變學習狀態。「清除學習紀錄」會留下句子。
   - 程式：lang-app.js 的 mySents、usesWord、sentBoxHTML、bindSentBox；頁面設 `PAGE.sents = true`，lib-tab.js 才顯示清單。
   - 測試：core-test.js 加了兩項；`node n5src/sents-e2e.js n5work`（要 playwright 和 Chrome）。
-  - 還沒做：AI 批改（金鑰不能放前端，要另外架後端）、日文頁的我的單字、查字典和造句。
+  - 還沒做：AI 批改（金鑰不能放前端，要另外架後端）、日文頁的造句。
 
 - **我的單字：自己新增單字**（義、西、德、俄、英頁；日文頁還沒做）：單字庫分頁多了「＋ 新增自己的單字」，搜尋不到、點例句的字查不到時也可以直接加。欄位：單字、意思、詞性（其他／名詞／動詞／形容詞，只用來篩選）、例句、例句裡的寫法（字在例句裡有變化時填，例如 whisker → whiskers）、例句的中文；只有單字和意思必填，沒有例句時填空直接考這個字。
   - 存法：定義放在這個字的進度紀錄裡，`S.items['en:my:whisker'].c = { w, zh, p, s, sz, a }`，所以合併（mergeState）和 Google 同步（sync.js 整筆寫）都不用改。刪除＝換成沒有 `c` 的空白紀錄（帶時間），其他裝置同步後也會刪掉。**備份碼不包含定義**（只有進度）。
