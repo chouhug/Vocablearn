@@ -6632,10 +6632,22 @@ function recentIds() {
   return new Set(cand.filter(w => recentT(w.id) >= since).map(w => w.id));
 }
 function recentCtl(onChange) { return { html: pillSelect('recentSel', '最近學過的範圍', RECENT_OPTS, SET.recent), bind: host => { const rs = $('#recentSel', host); if (rs) rs.onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; onChange(); }; } }; }
+// 題目上方的進度：答完一題（還沒按下一題）就先算這題做完了
+const progText = (n, d, total) => ({ left: Math.max(0, n - d), pct: n ? Math.min(100, d / n * 100) : 0 });
 function progressLine(round, total) {
-  const left = round.queue.length - round.idx;
-  const done = round.queue.length ? (round.idx / round.queue.length) * 100 : 0;
-  return `<span class="qprog" aria-label="本輪還剩 ${left} 題，此分類共 ${total} 題"><i style="width:${done}%"></i></span><span class="meta">剩 ${left} · 共 ${total}</span>`;
+  const n = round.queue.length, d = round.idx + (round.done ? 1 : 0), { left, pct } = progText(n, d, total);
+  return `<span class="qprog" data-n="${n}" data-d="${d}" data-t="${total}" aria-label="本輪還剩 ${left} 題，此分類共 ${total} 題"><i style="width:${pct}%"></i></span><span class="meta">剩 ${left} · 共 ${total}</span>`;
+}
+// 作答後呼叫：把畫面上的「剩 N」減一、進度條往前（同一題只算一次）
+function tickProg(host) {
+  const p = host && host.querySelector('.qprog[data-n]');
+  if (!p || p.dataset.ticked) return;
+  p.dataset.ticked = '1';
+  const n = +p.dataset.n, d = +p.dataset.d + 1, total = p.dataset.t, { left, pct } = progText(n, d, total);
+  p.dataset.d = d;
+  p.setAttribute('aria-label', `本輪還剩 ${left} 題，此分類共 ${total} 題`);
+  const bar = p.querySelector('i'); if (bar) bar.style.width = pct + '%';
+  const m = p.nextElementSibling; if (m && m.classList.contains('meta')) m.textContent = `剩 ${left} · 共 ${total}`;
 }
 function roundDone(host, R, again) {
   Quiz.active = null;
@@ -6658,6 +6670,7 @@ function renderChoice(host, q, onNext) {
     const ok = !!q.options[i].correct;
     $$('.opt', host).forEach((b, j) => { b.disabled = true; if (q.options[j].correct) b.classList.add('right'); else if (j === i) b.classList.add('wrong'); });
     q.onAnswer(ok, i);
+    tickProg(host);
     ok ? Sfx.ok() : Sfx.ng(); buzz(ok);
     const after = $('.after', host);
     after.innerHTML = `<div class="afterbox">${verdict(ok)}${q.explain || ''}<button class="btn solid block" data-next>下一題（Enter）</button>${!ok && q.afterHTML ? q.afterHTML(false) : ''}</div>`;
@@ -7047,6 +7060,7 @@ function nextFillQ(keepFocus) {
   const finish = (res, shown) => {
     answered = true;
     R.done = true;
+    tickProg(host);
     const ok = res !== 'wrong';
     if (ok) R.right++;
     record(w, 'fill', ok, src);
