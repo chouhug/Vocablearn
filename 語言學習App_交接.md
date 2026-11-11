@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v97'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v98'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -129,6 +129,9 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **日文頁 English 介面補翻譯**：我的單字、查字典、我的造句的文字（標題、欄位、按鈕、提示、錯誤訊息、toast）都加進 ja/i18n.js（D 對照表和 R 正規表示式，在「我的單字、查字典、我的造句」那段）。English 介面下自動填意思時先用英文解釋（`PAGE.mine.meanEn`），英文解釋預設打開。單字庫上方的統計格子文字可以換行（英文的 Choice mistakes、Fill-in mistakes 原本會超出格子）。
+  - 檢查方法：`UI_EN=1 node n5src/mine-ja-e2e.js n5work`、`UI_EN=1 node n5src/sents-ja-e2e.js n5work` 用 English 介面跑同樣的流程，最後印出畫面上沒有對照的中文（MISS）。剩下的只有使用者自己填的中文意思、單字意思設定成中文時的意思，和含日文的字串，都是正常的。
+
 - **我的單字的表單變簡單**（全部語言）：一開始只露出「單字、意思」（日文單字有漢字時多一欄「讀音」）。打完單字（離開欄位或按 Enter）就自動查字典，第一個中文翻譯直接填進意思（沒有中文就填第一個英文解釋），日文連讀音也自動填；不對可以直接改，或點其他的意思換掉（第一次點是換掉自動填的，之後點是接在後面）。原本的「查字典」按鈕拿掉了，連不上時有「再查一次」。
   - 例句、例句的中文、詞性、（日文）例句的讀法、例句裡的寫法都收在「更多」裡；編輯有例句或詞性的字時「更多」預設打開，錯誤訊息跟例句有關時也會自動打開。英文解釋預設收起來（沒有中文翻譯時才打開）。
   - **例句裡的寫法不用填了**：存檔時例句裡找不到原形，就用 `PAGE.mine.guessForm` 猜。語言頁找開頭最像的字（共同字首至少 min(字長, max(2, 字長-3)) 個字母，whisker → whiskers、усы → усами）；日文頁取語幹（去掉後面的平假名）加上後面接的平假名，去掉結尾的です／助詞（食べる → 食べました）。猜了要能通過 check 才用，不然照舊提示。
@@ -147,7 +150,6 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - 程式：ja/app.js 的 `myWord(id, c)`（把定義變成和內建單字一樣的資料，內容有問題回傳 `{ err }`，表單的檢查也用它）、`syncMine()`、`PAGE.mine`（readings: true、dict: 'ja'）。id 是 `v:my:單字`（v: 開頭，點字的小框才認得）。自己的字不出助詞題、不進文法例句和文法補充。
   - 為了讓日文頁能用表單，Sheet（拉起式面板）從 lang-app.js 搬到 `n5src/shared/sheet.js`，兩邊共用；`.sheet-body`、`.hl-warn` 的樣式在 base.css 也放了一份。mine.js 多了 `PAGE.mine.readings`、`posOpts` 可以不給。
   - 測試：`node n5src/mine-ja-e2e.js n5work`（要 playwright 和 Chrome，字典用假的回應）。日文的線上字典還沒用真的網路查過（英、德、俄、義、西查過，用的是同一支程式）。
-  - English 介面下，這些新畫面還是中文。
 
 - **線上查字典**（義、西、德、俄、英頁）：「新增自己的單字」表單的單字欄下面多了「查字典」。會列出中文翻譯（MyMemory，機器翻譯，可能不準）和英文解釋（英文版 Wiktionary，依詞性分），點一下就填進「意思」（已經有字就用「；」接在後面），詞性還沒選時照字典自動選。搜尋不到、點例句的字查不到時的按鈕改成「查字典並加到我的單字」，打開表單就自動查一次。
   - 程式在 `n5src/shared/dict.js`（dictLookup、dictFetch、dictText、DICT_POS；不用頁面變數，只用 fetch），表單在 shared/mine.js；頁面設 `PAGE.mine.dict = 語言代碼` 才有。

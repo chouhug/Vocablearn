@@ -232,7 +232,7 @@ select{min-height:44px;border-radius:10px;border:1px solid var(--line);backgroun
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0}
 .stat b{font-size:20px;font-variant-numeric:tabular-nums;line-height:1.25}
-.stat span{font-size:11px;color:var(--muted);white-space:nowrap}
+.stat span{font-size:11px;color:var(--muted);text-align:center;line-height:1.2;overflow-wrap:anywhere;hyphens:auto}
 .search input{width:100%;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);padding:0 14px;font-size:17px}
 .search input:focus{border-color:var(--pri);outline:none}
 .results{display:flex;flex-direction:column;gap:8px}
@@ -2600,7 +2600,7 @@ const I18N = { en: { dict: {}, re: [], kanaEx: {} } };
 (() => {
 const D = {
 // ---- 上方、分頁 ----
-'日語': 'Japanese', '今日 0/20 題': 'Today 0/20', '分頁': 'Tabs',
+'日語': 'Japanese', '日文': 'Japanese', '今日 0/20 題': 'Today 0/20', '分頁': 'Tabs',
 '五十音': 'Kana', '單選': 'Choice', '字卡': 'Cards', '填空': 'Fill-in', '文法': 'Grammar', '單字庫': 'Words',
 '漢字上的假名：開': 'Furigana: on', '漢字上的假名：開（點一下隱藏）': 'Furigana: on (tap to hide)', '漢字上的假名：關（點一下顯示）': 'Furigana: off (tap to show)',
 '顯示羅馬拼音': 'Show romaji', '外觀': 'Appearance', '外觀：淺色': 'Appearance: light', '外觀：深色': 'Appearance: dark',
@@ -2866,10 +2866,51 @@ const D = {
 '注意：「いい」變化時要換成「よ」：よかった、よくない、よくて。': 'Note: いい changes to よ: よかった, よくない, よくて.', '注意：「': 'Note: “',
 '」雖然是 い段或え段＋る 結尾，看起來像二類，但其實是一類動詞，要特別記住。': '” ends in an i-row or e-row sound + る and looks like group 2, but it is actually a group 1 verb — remember it.',
 '〜です': '〜です', '過去否定': 'Past negative', '副詞': 'Adverb', '＋に': '+ に',
+// ---- 我的單字、查字典、我的造句 ----
+'＋ 新增自己的單字': '+ Add your own word', '新增自己的單字': 'Add your own word', '編輯我的單字': 'Edit my word',
+'我的單字': 'My words', '我的造句': 'My sentences', '清單（待考、已學會、錯題、我的單字、我的造句）': 'Lists (to test, learned, mistakes, My words, My sentences)',
+'讀音（假名）': 'Reading (kana)', '意思': 'Meaning', '更多：例句（可以不填）': 'More: example sentence (optional)', '例句': 'Example sentence', '例句的中文': 'Sentence translation',
+'例句的讀法（整句用平假名；填了例句的漢字才有振り仮名）': 'Sentence reading (the whole sentence in hiragana; adds furigana to its kanji)',
+'例句裡的寫法（通常不用填，App 會自己找；找錯了再填）': 'Form used in the sentence (usually not needed — the app finds it; fill in only if it picks the wrong one)',
+'儲存': 'Save', '刪除': 'Delete', '確定刪除？': 'Delete for sure?', '編輯': 'Edit', '已儲存': 'Saved', '已刪除': 'Deleted', '已加到我的單字，並列入考題': 'Added to My words and to your quiz',
+'存好就列入考題。打完單字會自動查字典（Wiktionary、MyMemory），填好的意思可以自己改。': 'Saved words go straight into your quiz. After you type a word, the app looks it up (Wiktionary, MyMemory); you can edit the meaning it fills in.',
+'請輸入單字。': 'Please enter a word.', '請輸入意思（也可以等字典查完自動填）。': 'Please enter a meaning (or wait for the dictionary to fill it in).',
+'連不上字典，意思請自己填。': 'Can’t reach the dictionary — enter the meaning yourself.', '再查一次': 'Try again',
+'中文（機器翻譯，可能不準）': 'Chinese (machine translation, may be inaccurate)', '英文解釋（Wiktionary）': 'English definitions (Wiktionary)',
+'讀音請全部用假名（平假名或片假名）。': 'Write the reading in kana only (hiragana or katakana).',
+'「例句的讀法」和例句對不起來。請把整句用平假名寫一次（片假名和標點照原樣），或先留空。': '“Sentence reading” doesn’t match the sentence. Write the whole sentence in hiragana (keep katakana and punctuation as they are), or leave it empty.',
+'專有名詞': 'Proper noun', '介係詞': 'Preposition', '代名詞': 'Pronoun', '連接詞': 'Conjunction', '感嘆詞': 'Interjection', '限定詞': 'Determiner', '冠詞': 'Article', '數詞': 'Numeral',
+'片語': 'Phrase', '慣用語': 'Idiom', '介係詞片語': 'Prepositional phrase', '諺語': 'Proverb',
+'造句': 'Write a sentence', '用這個字造句': 'Write a sentence with this word', '存起來': 'Save', '播放我的句子': 'Play my sentence',
+'用這個字自己寫一個句子，寫過比較記得住。App 不會批改，寫完可以按喇叭聽聽看。': 'Write your own sentence with this word — it helps you remember. The app doesn’t correct it; tap the speaker to hear it.',
+'這句已經存過了': 'You already saved this sentence', '已存到我的造句': 'Saved to My sentences', '查看': 'View',
 };
 const re = [];
 const t = s => I18N.en.dict[s] ?? s;
 const R = (r, f) => re.push([r, f]);
+// 我的單字、查字典、我的造句
+R(/^單字或片語（(.+)）$/, (m, a) => `Word or phrase (${t(a)})`);
+R(/^單字庫裡本來就有「(.+)」，用上面的搜尋就找得到。$/, '“$1” is already in the word list — search for it above.');
+R(/^你已經新增過「(.+)」了。$/, 'You already added “$1”.');
+R(/^正在查「(.+)」…$/, 'Looking up “$1”…');
+R(/^字典裡查不到「(.+)」（可以檢查拼字，或改查原形）。意思請自己填。$/, 'No dictionary entry for “$1” (check the spelling, or try the base form). Enter the meaning yourself.');
+R(/^已自動填入(讀音和意思|意思|讀音)，不對可以直接改，或點下面其他的意思。$/, (m, a) => `Filled in the ${{ '讀音和意思': 'reading and meaning', '意思': 'meaning', '讀音': 'reading' }[a]} automatically — edit it if it’s wrong, or tap another meaning below.`);
+R(/^「(.+)」有漢字，請在「讀音」填它的假名。$/, '“$1” has kanji — enter its kana in “Reading”.');
+R(/^讀音「(.+)」和「(.+)」對不起來，請檢查假名的部分是不是一樣。$/, 'The reading “$1” doesn’t match “$2” — check that the kana parts are the same.');
+R(/^例句裡找不到「(.+)」。如果這個字在例句裡有變化（例如 食べる → 食べます），請在「例句裡的寫法」填上例句裡的樣子。$/, '“$1” isn’t in the sentence. If it changes form there (e.g. 食べる → 食べます), enter that form in “Form used in the sentence”.');
+R(/^「(.+)」在例句裡要是完整的一段（不能切在一個漢字詞的中間）。$/, '“$1” must be a whole part of the sentence (not cut in the middle of a kanji word).');
+R(/^「(.+)」有漢字，填空要知道它怎麼唸：請填「例句的讀法」。$/, '“$1” has kanji, so fill-in needs its reading — please fill in “Sentence reading”.');
+R(/^查字典並把「(.+)」加到我的單字$/, 'Look up “$1” and add it to My words');
+R(/^查字典並加到我的單字$/, 'Look it up and add to My words');
+R(/^用這個字造句（(\d+)）$/, 'Write a sentence with this word ($1)');
+R(/^我的造句（(\d+)）$/, 'My sentences ($1)');
+R(/^我的造句 (.+)$/, 'My sentences: $1');
+R(/^(\d+) 句$/, (m, n) => n + (n === '1' ? ' sentence' : ' sentences'));
+R(/^每個字最多存 (\d+) 句，要再寫請先刪掉舊的。$/, 'You can save up to $1 sentences per word. Delete an old one to add more.');
+R(/^用「(.+)」造一個句子$/, 'Write a sentence with “$1”');
+R(/^用「(.+)」造句$/, 'Write a sentence with “$1”');
+R(/^已存起來（句子裡沒看到「(.+)」，要不要再檢查一下？）$/, 'Saved (but “$1” isn’t in the sentence — want to check it?)');
+R(/^目前是(.+)，點一下切換語言$/, (m, a) => `Current: ${t(a)} — tap to switch language`);
 R(/^今日 (\d+)\/(\d+) 題( ✓)?$/, 'Today $1/$2$3');
 R(/^今天的 (\d+) 題完成了！$/, 'Today’s $1 questions done!');
 R(/^剩 (\d+) · 共 (\d+)$/, '$1 left · $2 total');
@@ -5305,7 +5346,7 @@ const PAGE = {
     head: w => `<div class="row" style="align-items:center;gap:12px;flex-wrap:nowrap"><div style="flex:1;min-width:0"><div class="gl-word" lang="ja">${wordHTML(w)}</div><div class="meta">${meanW(w)}</div></div>${iconPlay(w.reading, '播放單字')}</div>`
   },
   mine: {
-    prefix: MY, lang: 'ja', name: '日文', dict: 'ja', readings: true,
+    prefix: MY, lang: 'ja', name: '日文', dict: 'ja', readings: true, meanEn: LANG === 'en',
     builtin: word => WORDS.find(w => !w.custom && w.kind === 'w' && w.word === word),
     check: c => myWord('', c).err || '',
     needReading: word => !KANA_ONLY.test(word || 'あ'),
@@ -5780,6 +5821,7 @@ async function dictReading(word) {
 //   readings（日文）：多兩個欄位「讀音」c.r 和「例句的讀法」c.sr、
 //   dict（有才顯示「查字典」，程式在 shared/dict.js）：線上字典用的語言代碼、
 //   needReading(word)（日文）：這個字要不要填讀音、autoReading(word)（日文）：查讀音，回傳對得上的假名或 ''、
+//   meanEn：介面是英文，自動填意思時先用英文解釋、
 //   guessForm(例句, 單字)：沒填「例句裡的寫法」時猜例句裡的樣子（找不到回傳 ''）、
 //   builtin(word) 單字庫裡原本就有的同一個字、check(c) 檢查內容（回傳錯誤訊息或 ''）、changed() 存檔或刪除後更新畫面
 // 表單只露出「單字、（讀音）、意思」三欄：打完單字會自動查字典，把第一個中文翻譯（日文連讀音）填好；
@@ -5853,14 +5895,15 @@ function editMine(id, preset, look_) {
     if (my !== seq || !document.contains(dbox)) return;   // 查的時候又改了單字，或面板已經關了
     const notes = [];
     if (rd && rIn && !val('r')) { rIn.value = rd; showR(); notes.push('讀音'); }
-    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典。意思請自己填，有網路時可以<button type="button" class="linkbtn" id="myRe">再查一次</button>。</p>'; }
+    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典，意思請自己填。</p><button type="button" class="linkbtn" id="myRe" style="align-self:flex-start">再查一次</button>'; }
     else if (!r.defs.length && !r.zh.length) { dbox.innerHTML = '<p class="meta" style="margin:0">字典裡查不到「' + esc(word) + '」（可以檢查拼字，或改查原形）。意思請自己填。</p>'; }
     else {
-      const first = r.zh[0] || (r.defs[0] && r.defs[0].defs[0]) || '';
+      const enFirst = r.defs[0] && r.defs[0].defs[0];
+      const first = (M.meanEn ? enFirst || r.zh[0] : r.zh[0] || enFirst) || '';
       if (first && !zhIn.value.trim()) { zhIn.value = first; notes.push('意思'); }
       dbox.innerHTML = (notes.length ? `<p class="meta dict-auto" style="margin:0">已自動填入${notes.join('和')}，不對可以直接改，或點下面其他的意思。</p>` : '') +
         (r.zh.length ? `<div class="label">中文（機器翻譯，可能不準）</div><div class="chips dict-zh">${r.zh.map(z => `<button type="button" class="chip" data-fill="${esc(z)}"${z === zhIn.value.trim() ? ' aria-pressed="true"' : ''}>${esc(z)}</button>`).join('')}</div>` : '') +
-        (r.defs.length ? `<details class="dict-en"${r.zh.length ? '' : ' open'}><summary>英文解釋（Wiktionary）</summary>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}</details>` : '');
+        (r.defs.length ? `<details class="dict-en"${r.zh.length && !M.meanEn ? '' : ' open'}><summary>英文解釋（Wiktionary）</summary>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}</details>` : '');
       // 點一下：換成這個意思；按住已經填好的再點別的，會接在後面
       $$('[data-fill]', dbox).forEach(b => b.onclick = () => {
         const t = b.dataset.fill, cur = zhIn.value.trim(), auto = notes.includes('意思') && cur === first;

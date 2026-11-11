@@ -234,7 +234,7 @@ select{min-height:44px;border-radius:10px;border:1px solid var(--line);backgroun
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
 .stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 4px;display:flex;flex-direction:column;align-items:center;gap:0;min-width:0}
 .stat b{font-size:20px;font-variant-numeric:tabular-nums;line-height:1.25}
-.stat span{font-size:11px;color:var(--muted);white-space:nowrap}
+.stat span{font-size:11px;color:var(--muted);text-align:center;line-height:1.2;overflow-wrap:anywhere;hyphens:auto}
 .search input{width:100%;min-height:48px;border-radius:12px;border:1.5px solid var(--line);background:var(--surface);padding:0 14px;font-size:17px}
 .search input:focus{border-color:var(--pri);outline:none}
 .results{display:flex;flex-direction:column;gap:8px}
@@ -5345,6 +5345,7 @@ async function dictReading(word) {
 //   readings（日文）：多兩個欄位「讀音」c.r 和「例句的讀法」c.sr、
 //   dict（有才顯示「查字典」，程式在 shared/dict.js）：線上字典用的語言代碼、
 //   needReading(word)（日文）：這個字要不要填讀音、autoReading(word)（日文）：查讀音，回傳對得上的假名或 ''、
+//   meanEn：介面是英文，自動填意思時先用英文解釋、
 //   guessForm(例句, 單字)：沒填「例句裡的寫法」時猜例句裡的樣子（找不到回傳 ''）、
 //   builtin(word) 單字庫裡原本就有的同一個字、check(c) 檢查內容（回傳錯誤訊息或 ''）、changed() 存檔或刪除後更新畫面
 // 表單只露出「單字、（讀音）、意思」三欄：打完單字會自動查字典，把第一個中文翻譯（日文連讀音）填好；
@@ -5418,14 +5419,15 @@ function editMine(id, preset, look_) {
     if (my !== seq || !document.contains(dbox)) return;   // 查的時候又改了單字，或面板已經關了
     const notes = [];
     if (rd && rIn && !val('r')) { rIn.value = rd; showR(); notes.push('讀音'); }
-    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典。意思請自己填，有網路時可以<button type="button" class="linkbtn" id="myRe">再查一次</button>。</p>'; }
+    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典，意思請自己填。</p><button type="button" class="linkbtn" id="myRe" style="align-self:flex-start">再查一次</button>'; }
     else if (!r.defs.length && !r.zh.length) { dbox.innerHTML = '<p class="meta" style="margin:0">字典裡查不到「' + esc(word) + '」（可以檢查拼字，或改查原形）。意思請自己填。</p>'; }
     else {
-      const first = r.zh[0] || (r.defs[0] && r.defs[0].defs[0]) || '';
+      const enFirst = r.defs[0] && r.defs[0].defs[0];
+      const first = (M.meanEn ? enFirst || r.zh[0] : r.zh[0] || enFirst) || '';
       if (first && !zhIn.value.trim()) { zhIn.value = first; notes.push('意思'); }
       dbox.innerHTML = (notes.length ? `<p class="meta dict-auto" style="margin:0">已自動填入${notes.join('和')}，不對可以直接改，或點下面其他的意思。</p>` : '') +
         (r.zh.length ? `<div class="label">中文（機器翻譯，可能不準）</div><div class="chips dict-zh">${r.zh.map(z => `<button type="button" class="chip" data-fill="${esc(z)}"${z === zhIn.value.trim() ? ' aria-pressed="true"' : ''}>${esc(z)}</button>`).join('')}</div>` : '') +
-        (r.defs.length ? `<details class="dict-en"${r.zh.length ? '' : ' open'}><summary>英文解釋（Wiktionary）</summary>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}</details>` : '');
+        (r.defs.length ? `<details class="dict-en"${r.zh.length && !M.meanEn ? '' : ' open'}><summary>英文解釋（Wiktionary）</summary>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}</details>` : '');
       // 點一下：換成這個意思；按住已經填好的再點別的，會接在後面
       $$('[data-fill]', dbox).forEach(b => b.onclick = () => {
         const t = b.dataset.fill, cur = zhIn.value.trim(), auto = notes.includes('意思') && cur === first;
