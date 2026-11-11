@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v103'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v104'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -131,7 +131,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - **英文介面套用到所有語言頁**（2026-11-11，第一步：介面）：設定裡的「介面語言」選 English 會套用到整個 App（日文頁和義、西、德、俄、英頁一起換，換了會重新載入；別的分頁換了也會跟著重新載入）。
   - 翻譯的程式從 ja/app.js 搬到 `n5src/shared/i18n.js`（trText、L、trNode、MutationObserver），兩種頁面共用；學的語言（`lang="ja"`、`lang="it"`…，或 class="ja"、data-noi18n、textarea）不會被翻。
   - 對照表分三層：`n5src/i18n-ui.js`（原本 ja/i18n.js 前面的介面對照，兩種頁面都載入）、`n5src/lang-i18n.js`（語言頁才有的介面文字 LD 和含變數的句子 LR；LR 放在共用規則前面先比對，語言名稱用 NM 換）、各語言的 `<代碼>/i18n.js`（內容，見下一項）。ja/i18n.js 只剩日文頁的例句翻譯和五十音例字。
-  - 各語言的內容（文法說明、練習題、例句翻譯…）：`<代碼>/i18n.js` 用 `Object.assign(I18N.en.content, { 中文原文: English })`，英文介面時 lang-app.js 一開始用 `I18N.en.applyContent(LX, LANGCFG)` 整段換掉（單字的中文意思不換，意思看「單字意思」設定）。**有這個檔的語言才有英文內容；還沒有的語言，介面是英文、內容還是中文。**目前有英文內容的語言：義大利文（it）、西班牙文（es）、德文（de）。
+  - 各語言的內容（文法說明、練習題、例句翻譯…）：`<代碼>/i18n.js` 用 `Object.assign(I18N.en.content, { 中文原文: English })`，英文介面時 lang-app.js 一開始用 `I18N.en.applyContent(LX, LANGCFG)` 整段換掉（單字的中文意思不換，意思看「單字意思」設定）。**有這個檔的語言才有英文內容；還沒有的語言，介面是英文、內容還是中文。**目前有英文內容的語言：義大利文（it）、西班牙文（es）、德文（de）、俄文（ru）。俄文的 RU.CASE_ZH、RU.G_ZH 刻意留中文（引擎用它們組查詢說明、出題時用 /格|原形/ 判斷），畫面上的字由 ru/i18n.js 的規則翻。
   - 檢查方法：用 playwright 開英文介面、點過每個分頁和按鈕，看 `window.__i18nMiss`（沒有對照的中文）。
 
 - **拿掉「我的造句」**（全部語言，2026-11-11 使用者要求）：單字頁的造句區、日文頁的造句面板和所有「造句」按鈕（字卡、點字的小框、搜尋結果）、單字庫清單的「我的造句」都拿掉了；shared/sents.js、sents-e2e.js、sents-ja-e2e.js、相關樣式和 English 對照都刪掉。
