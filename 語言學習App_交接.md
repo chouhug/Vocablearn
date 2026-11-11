@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v92'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v93'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -126,12 +126,17 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **我的造句**（義、西、德、俄、英頁；日文頁還沒做）：單字頁（點單字打開的面板）多了「我的造句」，可以用這個字自己寫句子存起來；存好的句子每個字都能點、可以按喇叭聽、可以刪除（按兩次）。App 不批改，只在句子裡沒看到這個字（原形或 App 認得的變化形，`usesWord`）時提醒一下。單字庫的清單多一個「我的造句」（寫過句子的字和句數，點了回到單字頁）。
+  - 存法：放在這個字的進度紀錄 `S.items[id].u = [{ s 句子, t 時間 }]`（每個字最多 20 句），和「我的單字」一樣直接跟著合併和 Google 同步；**備份碼不含**。寫句子不會改變學習狀態。「清除學習紀錄」會留下句子。
+  - 程式：lang-app.js 的 mySents、usesWord、sentBoxHTML、bindSentBox；頁面設 `PAGE.sents = true`，lib-tab.js 才顯示清單。
+  - 測試：core-test.js 加了兩項；`node n5src/sents-e2e.js n5work`（要 playwright 和 Chrome）。
+  - 還沒做：AI 批改（金鑰不能放前端，要另外架後端）、App 內線上查字典、日文頁的我的單字和造句。
+
 - **我的單字：自己新增單字**（義、西、德、俄、英頁；日文頁還沒做）：單字庫分頁多了「＋ 新增自己的單字」，搜尋不到、點例句的字查不到時也可以直接加。欄位：單字、意思、詞性（其他／名詞／動詞／形容詞，只用來篩選）、例句、例句裡的寫法（字在例句裡有變化時填，例如 whisker → whiskers）、例句的中文；只有單字和意思必填，沒有例句時填空直接考這個字。
   - 存法：定義放在這個字的進度紀錄裡，`S.items['en:my:whisker'].c = { w, zh, p, s, sz, a }`，所以合併（mergeState）和 Google 同步（sync.js 整筆寫）都不用改。刪除＝換成沒有 `c` 的空白紀錄（帶時間），其他裝置同步後也會刪掉。**備份碼不包含定義**（只有進度）。
   - lang-app.js 的 `syncMine()` 把 S 裡的定義放進 WORDS／WMAP／ORDER／ALL_IDS（詞性 `my`，`w.custom = true`），啟動、存檔、雲端或別的分頁合併進來（refreshPassive）時都會跑。自己的字不出冠詞題、動詞變化題，不進文法例句，也沒有變化表。
   - 新增後直接是「待考」；單字頁有「編輯或刪除這個字」，單字庫的清單多一個「我的單字」。「清除學習紀錄」會留下自己新增的字（變回未學）。
   - 測試：core-test.js、sync-test.js 各加了幾項；`node n5src/mine-e2e.js n5work`（要 playwright 和 Chrome，不在 test-all.js 裡）用手機寬度實際新增、作答、編輯、刪除。
-  - 接下來要做：App 內線上查字典（查到的字可以加到我的單字）、造句（自己寫句子存起來）、日文頁的我的單字。
 
 - **跳出面板時後面不能滑**（lang.js）：選單、單字詳細、切換語言、導覽、選語言這些面板開著時，`<html>` 加上 `lg-lock`（overflow:hidden），面板外的手指拖動也擋掉（iOS Safari 有時不理 overflow:hidden）；面板裡能捲動的區域（`.pk-list`、`.sheet-body`、導覽卡）照常捲，捲到頂／底也不會帶動後面。用 MutationObserver 看畫面上有沒有開著的面板（`.pk-back:not([hidden])`、`.tour-card:not([hidden])`、`.lg-welcome`），所以各頁的面板不用自己處理。點字跳出的小框（日文頁 .peek）不鎖。
 - **第一次使用的選語言改成整頁**（`.lg-welcome`）：完全蓋住 App，看不到後面的頁面。
