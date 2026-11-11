@@ -620,6 +620,14 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .tour-dots i.on{background:var(--fill);width:18px}
 .tour-lang{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .tour-art{display:block;width:100%;height:auto;max-height:110px}
+/* 我的單字：新增／編輯表單（shared/mine.js） */
+.myform{display:flex;flex-direction:column;gap:6px}
+.myform .label{margin-top:6px}
+.myform input[type=text],.myform textarea{width:100%;min-height:46px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);padding:8px 12px;font-family:inherit;font-size:17px}
+.myform textarea{min-height:72px;resize:vertical}
+.myform input:focus,.myform textarea:focus{border-color:var(--pri);outline:none}
+.myform .btnrow{margin-top:10px}
+.myform .btnrow.one{grid-template-columns:1fr}
 
 /* 語言頁（義大利文、西班牙文、德文、俄文…）：沿用日文 App 的樣式（建置時從 ../index.html 抽出），這裡只補語言頁需要的部分 */
 :root{--font-ja:var(--font-ui);--font-kana:var(--font-ui)}
@@ -3460,7 +3468,7 @@ const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const GOAL = 20;
 
 // ================= 資料 =================
-const POS_ZH = { n: '名詞', adj: '形容詞', adv: '副詞', prep: '介係詞', art: '冠詞', pron: '代名詞', conj: '連接詞', num: '數字', det: '限定詞', q: '疑問詞', expr: '常用語', 'v-are': '動詞 -are', 'v-ere': '動詞 -ere', 'v-ire': '動詞 -ire', 'v-isc': '動詞 -ire（-isc-）', 'v-irr': '不規則動詞', ...(LC.posZh || {}) };
+const POS_ZH = { n: '名詞', adj: '形容詞', adv: '副詞', prep: '介係詞', art: '冠詞', pron: '代名詞', conj: '連接詞', num: '數字', det: '限定詞', q: '疑問詞', expr: '常用語', 'v-are': '動詞 -are', 'v-ere': '動詞 -ere', 'v-ire': '動詞 -ire', 'v-isc': '動詞 -ire（-isc-）', 'v-irr': '不規則動詞', ...(LC.posZh || {}), my: '我的單字' };
 const isVerbPos = p => /^v/.test(p);
 const pgOf = p => isVerbPos(p) ? 'v' : (p === 'n' || p === 'adj' ? p : 'o');
 const WORDS = IT.W.map(e => {
@@ -3472,6 +3480,29 @@ const WMAP = Object.fromEntries(WORDS.map(w => [w.id, w]));
 const ALL_IDS = WORDS.map(w => w.id);
 const LOOK = IT.getLookup();
 const idOfEntry = e => LP + e[0] + '|' + e[1];
+// ---- 我的單字（自己新增的字）----
+// 定義放在這個字的進度紀錄裡：S.items[LP + 'my:' + 單字].c = { w 單字, zh 意思, p 詞性分組, s 例句, sz 例句中文, a 例句裡的寫法 }
+// 所以合併、Google 同步都和一般紀錄一樣，不用另外處理；刪除＝換成沒有 c 的空白紀錄（帶時間，其他裝置也會跟著刪）
+const MY = LP + 'my:';
+function myWord(id, c) {
+  const sent = c.s || c.w;
+  const e = [c.w, 'my', '-', '-', c.zh, c.en || '', sent, c.s ? (c.sz || '') : c.zh, c.s && c.a ? c.a : c.w];
+  return { id, e, word: c.w, title: c.w, pos: 'my', pg: POS_FILTERS.some(x => x[0] === c.p) && c.p !== 'all' ? c.p : 'o', zh: c.zh, en: c.en || '', sent, sentZh: e[7], ans: e[8], kind: 'w', custom: true };
+}
+// 讓 WORDS 跟 S 裡的「我的單字」一致（啟動、存檔、從雲端或別的分頁合併進來之後都要跑）；有變動回傳 true
+function syncMine() {
+  const want = {};
+  for (const id in S.items) if (id.startsWith(MY)) { const c = S.items[id] && S.items[id].c; if (c && c.w && c.zh) want[id] = c; }
+  let changed = false;
+  const drop = (arr, id) => { const i = arr.findIndex(x => (x.id || x) === id); if (i >= 0) arr.splice(i, 1); };
+  for (const w of WORDS.filter(w => w.custom && !want[w.id])) { drop(WORDS, w.id); drop(ORDER, w.id); drop(ALL_IDS, w.id); delete WMAP[w.id]; changed = true; }
+  for (const id in want) {
+    const nw = myWord(id, want[id]), old = WMAP[id];
+    if (!old) { WORDS.push(nw); ORDER.unshift(nw); ALL_IDS.push(id); WMAP[id] = nw; changed = true; }
+    else if (JSON.stringify(old.e) !== JSON.stringify(nw.e) || old.pg !== nw.pg) { Object.assign(old, nw); changed = true; }
+  }
+  return changed;
+}
 // 字卡順序：常用語先，再讓名詞、動詞、形容詞、其他輪流出現
 const ORDER = (() => {
   const g = { expr: [], n: [], v: [], adj: [], o: [] };
@@ -3719,7 +3750,10 @@ function openToken(form) {
       body += `<div class="an"><div class="grow"><b lang="${LC.id}">${esc(x.lemma)}</b><div class="meta">${esc(x.desc || (ex && ex[1]) || '')}</div></div></div>`;
     }
   }
-  if (!infos.length && !nm) body += '<p class="meta">找不到這個字。</p>';
+  const mine = WORDS.filter(w => w.custom && IT.norm(w.word).toLowerCase() === k);
+  for (const w of mine) body += `<div class="an tk-an"><div class="grow"><div class="tk-h"><b lang="${LC.id}">${esc(w.title)}</b><span class="pos">${esc(POS_ZH[w.pos])}</span></div><p class="mean-big tk-m">${meanW(w)}</p>
+        <button class="btn quiet tk-more" data-word="${esc(w.id)}">看完整說明</button></div></div>`;
+  if (!infos.length && !nm && !mine.length) body += `<p class="meta">找不到這個字。</p><button class="btn quiet" data-addmine="${esc(form)}">＋ 加到我的單字</button>`;
   Sheet.open('查字', `<div class="rowx tk-top"><div class="grow"><div class="w1" lang="${LC.id}">${esc(form)}</div></div>${iconPlay(form, '播放 ' + form)}</div>${body}`, form);
 }
 function conjTable(w, which) {
@@ -3749,6 +3783,7 @@ function tableHTML(t, play) {
 }
 function formsHTML(w) {
   const e = w.e;
+  if (w.custom) return '';
   // 語言包的變化表：義、西沒有；德文給名詞、形容詞；俄文也給代名詞、限定詞（沒有就回傳 null，照下面的做法）
   if (IT.formsTable && (!isVerbPos(w.pos) || IT.VERB_TABLE)) { const t = IT.formsTable(e); if (t) return (isVerbPos(w.pos) ? verbInfo(w) : '') + tableHTML(t, true); }
   if (w.pos === 'n') {
@@ -3782,16 +3817,18 @@ function openWord(id) {
   const btns = r.s === 'new' || r.s === 'excluded'
     ? `<div class="btnrow"><button class="btn known" data-wa="known">${ICON.ok}已經會了</button><button class="btn solid" data-wa="queue">列入考題</button></div>`
     : `<button class="btn quiet block" data-wa="reset">移回未學</button>`;
+  const mineBtn = w.custom ? '<button class="btn quiet block" data-wa="edit">編輯或刪除這個字</button>' : '';
   const body = `<div class="rowx"><div class="grow"><div class="w1" lang="${LC.id}">${esc(w.title)}</div><div class="row" style="margin-top:6px"><span class="pos">${esc(POS_ZH[w.pos])}</span>${w.pos === 'n' && hasGen(w.e[2]) ? `<span class="pos ${w.e[2]}">${genOf(w.e[2])[0]}</span>` : ''}${tags.join('')}</div></div>${iconPlay(w.title, '播放單字')}</div>
-    <p class="mean-big">${esc(w.zh)}</p><div class="meta" style="margin-top:-8px">${esc(w.en)}</div>
+    <p class="mean-big">${esc(w.zh)}</p>${w.en ? `<div class="meta" style="margin-top:-8px">${esc(w.en)}</div>` : ''}
     ${formsHTML(w)}
     <div class="gp-title">例句</div>
     <div class="ex-row"><div class="sent sm" lang="${LC.id}">${sentHTML(w.sent)}</div>${iconPlay(w.sent, '播放例句')}</div><div class="zhline" style="margin-top:-6px">${esc(w.sentZh)}</div>
-    ${dueTxt}${btns}`;
+    ${dueTxt}${btns}${mineBtn}`;
   const el = Sheet.open(esc(POS_ZH[w.pos]) + ' · 單字', body, w.word);
   $$('[data-tense]', el).forEach(b => b.onclick = () => { $$('[data-tense]', el).forEach(x => x.setAttribute('aria-pressed', String(x === b))); $('#conj', el).innerHTML = conjTable(w, b.dataset.tense); });
   $$('[data-wa]', el).forEach(b => b.onclick = () => {
     const a = b.dataset.wa;
+    if (a === 'edit') return editMine(id);
     if (a === 'queue') { touch(id, { s: 'queued' }); toast('已列入考題'); }
     if (a === 'known') { const gap = SRS[1] + Math.floor(Math.random() * 8); touch(id, { s: 'learned', lv: 1, due: addDays(today(), gap) }); toast(`已標記為學會，${gap} 天後會再考一次`); }
     if (a === 'reset') { touch(id, { s: 'new', lv: 0, due: '', w: {} }); toast('已移回未學'); }
@@ -3804,7 +3841,9 @@ document.addEventListener('click', e => {
   const tk = e.target.closest('.tk[data-w]');
   if (tk && !tk.closest('.opt')) { e.preventDefault(); openToken(tk.dataset.w); return; }
   const wd = e.target.closest('[data-word]');
-  if (wd) { e.preventDefault(); openWord(wd.dataset.word); }
+  if (wd) { e.preventDefault(); openWord(wd.dataset.word); return; }
+  const am = e.target.closest('[data-addmine]');
+  if (am) { e.preventDefault(); editMine('', am.dataset.addmine); }
 });
 document.addEventListener('keydown', e => { if ((e.key === 'Enter' || e.key === ' ') && e.target.matches && e.target.matches('.tk[data-w]')) { e.preventDefault(); Sfx.peek(); openToken(e.target.dataset.w); } });
 
@@ -3838,7 +3877,8 @@ function wordPool(src) {
     mcReview: w => wrongOf(w.id, 'mc') === 2,
     fillWrong: w => wrongOf(w.id, 'fill') === 1,
     fillReview: w => wrongOf(w.id, 'fill') === 2,
-    excluded: w => getRec(w.id).s === 'excluded'
+    excluded: w => getRec(w.id).s === 'excluded',
+    mine: w => !!w.custom
   }[src];
   return (src === 'new' ? ORDER : WORDS).filter(w => f(w));
 }
@@ -4011,7 +4051,7 @@ const MC_MODES = [['it2zh', LC.short + '→中'], ['zh2it', '中→' + LC.short]
 function mcPool(src) {
   let pool = srcPool(src);
   if (UI.mcMode === 'verb') pool = pool.filter(w => isVerbPos(w.pos));
-  if (UI.mcMode === 'art') pool = pool.filter(w => IT.makeArtQuestion(w.e, LOOK));
+  if (UI.mcMode === 'art') pool = pool.filter(w => !w.custom && IT.makeArtQuestion(w.e, LOOK));
   return pool;
 }
 function artHint(x) {
@@ -4107,6 +4147,7 @@ function nextMCQ() {
 
 // ================= 字卡 =================
 function formsLine(w) {
+  if (w.custom) return '';
   if (IT.formsLine) { const h = IT.formsLine(w.e); if (h != null) return h ? `<span lang="${LC.id}">${esc(h)}</span>` : ''; }
   if (w.pos === 'n') { const f = IT.nounForms(w.e); return f.pl ? `複數：<span lang="${LC.id}">${esc(f.pl)}</span>` : (f.plOnly ? '只用複數' : ''); }
   if (w.pos === 'adj') return `<span lang="${LC.id}">${esc(IT.adjForms(w.e).join(' / '))}</span>`;
@@ -4328,7 +4369,7 @@ function gramIndex() {
   GIDX = {};
   for (const g of IT.GRAMMAR) {
     const out = (g.ex || []).map(x => ({ s: x[0], zh: x[1], r: IT.grammarMatch(g, x[0]) }));
-    for (const w of WORDS) { const r = IT.grammarMatch(g, w.sent); if (r.length) out.push({ s: w.sent, zh: w.sentZh, r, w }); }
+    for (const w of WORDS) { if (w.custom) continue; const r = IT.grammarMatch(g, w.sent); if (r.length) out.push({ s: w.sent, zh: w.sentZh, r, w }); }
     const seen = new Set();
     GIDX[g.id] = out.filter(x => !seen.has(x.s) && seen.add(x.s)).sort((a, b) => (a.w ? 1 : 0) - (b.w ? 1 : 0) || a.s.length - b.s.length);
   }
@@ -4339,7 +4380,7 @@ const plain = h => h.replace(/<[^>]+>/g, '');
 const gramPreview = h => { const t = plain(h.replace(/<table[\s\S]*?<\/table>/g, ' ')).trim(); return (t || plain(h.replace(/<\/t[dh]>/g, ' '))).replace(/\s+/g, ' ').trim().slice(0, 60); };
 const RULE_SHORT = LC.ruleShort || {};
 function ruleDemo(R) {
-  const find = (word, pos) => WORDS.find(w => w.word === word && (!pos || w.pos === pos || (pos === 'v' && isVerbPos(w.pos))));
+  const find = (word, pos) => WORDS.find(w => !w.custom && w.word === word && (!pos || w.pos === pos || (pos === 'v' && isVerbPos(w.pos))));
   if (IT.demoTable) {
     const t = IT.demoTable(R.id, R.demo.map(x => find(x, 'n') || find(x, 'adj') || (IT.VERB_TABLE ? find(x) : null)).filter(Boolean).map(w => w.e));
     if (t) return `<div class="scroll-x" style="flex-shrink:0"><table class="t"><thead><tr>${t.head.map(x => `<th>${esc(x)}</th>`).join('')}</tr></thead><tbody>${t.rows.map(r => '<tr>' + r.map(c => c.f ? `<td class="f" lang="${LC.id}">${esc(c.t)}</td>` : `<td class="p">${esc(c.t)}</td>`).join('') + '</tr>').join('')}</tbody></table></div>`;
@@ -4383,7 +4424,7 @@ function renderGram() {
   const back = () => { UI.gramSel = ''; saveUI(); renderGram(); window.scrollTo(0, 0); };
   const rule = IT.RULES.find(r => r.id === UI.gramSel);
   if (rule) {
-    const words = WORDS.filter(w => rule.filter(w.e));
+    const words = WORDS.filter(w => !w.custom && rule.filter(w.e));
     host.innerHTML = `<button class="gr-back" id="grBack">‹ 文法列表</button>
       <div class="card"><div class="gr-head"><h2>${esc(rule.title)}</h2><span class="lv">詞性變化規則</span></div><div class="gbody scroll-x">${rule.body}</div></div>
       <div class="card"><div class="gp-title">實際變化例子</div><div class="rc-list">${ruleDemo(rule)}</div></div>
@@ -4701,6 +4742,13 @@ const PAGE = {
     afterMean: w => { const fl = formsLine(w); return fl ? `<div class="forms">${fl}</div>` : ''; },
     bind: () => {}
   },
+  mine: {
+    prefix: MY, lang: LC.id, name: LC.name,
+    posOpts: [['o', '其他'], ['n', '名詞'], ['v', '動詞'], ['adj', '形容詞']],
+    builtin: word => WORDS.find(w => !w.custom && IT.norm(w.word).toLowerCase() === IT.norm(word).toLowerCase()),
+    check: c => c.s && !answerSpan({ sent: c.s, ans: c.a || c.w })[1] ? `例句裡找不到「${c.a || c.w}」。如果這個字在例句裡有變化，請在「例句裡的寫法」填上例句裡的樣子。` : '',
+    changed: () => refreshPassive(true)
+  },
   lib: {
     searchPh: `搜尋：${LC.name}、中文或英文`,
     voiceTitle: `${LC.name}發音`,
@@ -4717,7 +4765,7 @@ const PAGE = {
     extraHTML: () => '',
     endHTML: () => `<section><h4>重設</h4>
           <button class="btn quiet" id="resetIt" style="min-height:40px">清除${LC.name}的學習紀錄</button>
-          <div class="meta">只清${LC.name}，其他語言的進度不會動。</div>
+          <div class="meta">只清${LC.name}，其他語言的進度不會動。自己新增的單字會留著（變回未學）。</div>
         </section>`,
     syncNote: '各語言的進度存在同一個帳號裡；備份碼也是同一串，每個語言頁都能匯入。所有設定（外觀、音效、題數、意思、介面語言）各語言共用，在哪一頁改都一樣。',
     expNote: n => `共 ${n} 字，包含所有語言。`,
@@ -4736,7 +4784,7 @@ const PAGE = {
           reloadShared();
           const now = Date.now();
           // 留下空白紀錄（帶時間），同步時其他裝置也會一起清掉
-          for (const id in S.items) if (id.startsWith(LP)) S.items[id] = Object.assign(blankRec(), { t: now });
+          for (const id in S.items) if (id.startsWith(LP)) S.items[id] = Object.assign(blankRec(), { t: now }, S.items[id] && S.items[id].c ? { c: S.items[id].c } : {});   // 自己新增的字留著，只清進度
           saveLocal(); Cloud.schedule(); Sheet.close(); deck = null; mcRound = null; fillRound = null; renderLib(); toast(`已清除${LC.name}的紀錄`);
         };
       };
@@ -4752,18 +4800,20 @@ const PAGE = {
 //   langHTML() 介面語言區、extraHTML() 單字意思後面的設定區（日文：文法補充）、endHTML() 最後面的設定區（語言頁：重設）、
 //   syncNote 同步說明、expNote(n) 匯出後的說明、impNote 匯入說明、impKeep(id) 匯入時要收的紀錄、
 //   impToast(n) 匯入完成訊息、wordCell(w) 清單裡的單字、bind(host) 綁定 langHTML／extraHTML 的按鈕、
-//   resetRounds() 換每輪題數時要清掉的其他回合、onEntryMc() 從入口進單選前要做的事
+//   resetRounds() 換每輪題數時要清掉的其他回合、onEntryMc() 從入口進單選前要做的事、
+// 頁面有 PAGE.mine 才顯示「新增自己的單字」和「我的單字」清單（表單 editMine 在 shared/mine.js）
 let libList = 'queued';
 const entryBtn = (tab, src, title, n) => `<button data-go="${tab}:${src}"${n ? '' : ' class="zero"'}><span>${title}</span><b>${n}</b></button>`;
 function libCounts() {
   const t = today(), rset = recentIds();
-  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0 };
+  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0, mine: 0 };
   for (const w of WORDS) {
     const r = getRec(w.id);
     if (r.s === 'learned') { c.learned++; if (r.due && r.due <= t) c.dueAll++; }
     if (r.s === 'queued') c.queued++;
     if (r.s === 'excluded') c.excluded++;
     if (rset.has(w.id)) c.recent++;
+    if (w.custom) c.mine++;
     const ww = r.w || {};
     if (ww.mc === 1) c.mcW++; if (ww.mc === 2) c.mcR++;
     if (ww.fill === 1) c.fillW++; if (ww.fill === 2) c.fillR++;
@@ -4788,9 +4838,10 @@ function renderLib() {
     </div>
     <div class="search"><input id="q" type="search" placeholder="${esc(P.searchPh)}" aria-label="搜尋單字" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(UI.libQ || '')}"></div>
     <div class="results" id="results"></div>
+    ${PAGE.mine ? '<button class="btn quiet block" id="addMine">＋ 新增自己的單字</button>' : ''}
     ${ents.length ? `<div class="entry">${ents.map(x => entryBtn(...x)).join('')}</div>` : '<p class="meta" style="margin:0">目前沒有要複習的題目。練習時答錯的字、到期的字會出現在這裡。</p>'}
-    <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題）</summary>
-      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
+    <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題${PAGE.mine ? '、我的單字' : ''}）</summary>
+      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
       <div class="lrows"></div>
     </details>
     <details class="lst"${Cloud.mode === 'google' && !Cloud.user ? ' open' : ''}><summary>設定<span class="n sync${Cloud.ref ? ' on' : ''}" id="syncState"><i></i><span>${esc(Cloud.chip())}</span></span></summary>
@@ -4847,6 +4898,7 @@ function renderLib() {
   const lb = $('#listBox');
   lb.addEventListener('toggle', () => { if (lb.open) fillList(lb); });
   $$('[data-list]', lb).forEach(b => b.onclick = () => { libList = b.dataset.list; $$('[data-list]', lb).forEach(x => x.setAttribute('aria-pressed', String(x === b))); fillList(lb); });
+  if (PAGE.mine) $('#addMine').onclick = () => editMine('');
   const q = $('#q');
   q.addEventListener('input', () => { UI.libQ = q.value; doSearch(q.value); });
   if (q.value) doSearch(q.value);
@@ -4893,7 +4945,7 @@ function fillList(d) {
   if (key === 'learned') arr = arr.slice().sort((a, b) => (getRec(a.id).due || '').localeCompare(getRec(b.id).due || ''));
   const box = $('.lrows', d);
   if (!arr.length) { box.innerHTML = '<div class="lrow"><span class="z">目前是空的</span></div>'; return; }
-  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復' }[key];
+  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復', mine: '編輯' }[key];
   box.innerHTML = arr.map(w => {
     const r = getRec(w.id);
     const dd = key === 'learned' ? `<span class="d">${r.due ? r.due.slice(5).replace('-', '/') : ''} · 第${(r.lv || 0) + 1}級</span>` : '';
@@ -4901,6 +4953,7 @@ function fillList(d) {
   }).join('');
   $$('button[data-id]', box).forEach(b => b.onclick = () => {
     const id = b.dataset.id, r = getRec(id);
+    if (key === 'mine') return editMine(id);
     if (key === 'queued') touch(id, { s: 'new' });
     else if (key === 'learned') touch(id, { s: 'new', lv: 0, due: '' });
     else if (key === 'excluded') touch(id, { s: 'new' });
@@ -4908,6 +4961,58 @@ function fillList(d) {
     b.closest('.lrow').remove();
     const n = $(`[data-list="${key}"] .n`, d); if (n) n.textContent = Math.max(0, +n.textContent - 1);
   });
+}
+// ================= 我的單字：新增／編輯自己的單字（n5src/shared/mine.js） =================
+// 自己新增的字存在進度紀錄的 c 欄位（S.items[id].c），所以會跟著合併和 Google 同步；頁面的 syncMine() 把它們放進 WORDS。
+// 各頁不一樣的地方在 PAGE.mine：
+//   prefix 紀錄 id 的開頭、lang 輸入框的語言代碼、name 語言名稱、posOpts 詞性選項、
+//   builtin(word) 單字庫裡原本就有的同一個字、check(c) 檢查內容（回傳錯誤訊息或 ''）、changed() 存檔或刪除後更新畫面
+function editMine(id, preset) {
+  const M = PAGE.mine;
+  const old = id && S.items[id] && S.items[id].c;
+  const c = old || { w: preset || '', zh: '', p: 'o' };
+  const field = (k, label, val, lang) => `<label class="label" for="my-${k}">${label}</label><input id="my-${k}" type="text" value="${esc(val || '')}"${lang ? ` lang="${lang}"` : ''} autocapitalize="off" autocorrect="off" spellcheck="false">`;
+  const el = Sheet.open(old ? '編輯我的單字' : '新增自己的單字', `<form id="myForm" class="myform" autocomplete="off" novalidate>
+    ${field('w', `單字或片語（${esc(M.name)}）`, c.w, M.lang)}
+    ${field('zh', '意思', c.zh)}
+    <label class="label" for="my-p">詞性</label>
+    <select id="my-p">${M.posOpts.map(([k, l]) => `<option value="${k}"${(c.p || 'o') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+    <label class="label" for="my-s">例句（可以不填）</label>
+    <textarea id="my-s" lang="${M.lang}" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false">${esc(c.s || '')}</textarea>
+    ${field('a', '例句裡的寫法（這個字在例句裡有變化才要填）', c.a, M.lang)}
+    ${field('sz', '例句的中文（可以不填）', c.sz)}
+    <div class="hl-warn" id="myMsg" role="alert" hidden></div>
+    <div class="btnrow${old ? '' : ' one'}">${old ? '<button class="btn quiet" type="button" id="myDel">刪除</button>' : ''}<button class="btn solid" type="submit">儲存</button></div>
+    <p class="meta" style="margin:0">存好後會直接列入考題，字卡、單選、填空都會出；沒有例句時，填空直接考這個字。用 Google 登入會同步到其他裝置；備份碼不包含自己新增的單字。</p>
+  </form>`);
+  const val = k => $('#my-' + k, el).value.trim().replace(/\s+/g, ' ');
+  const msg = t => { const m = $('#myMsg', el); m.textContent = t; m.hidden = !t; if (t) m.scrollIntoView({ block: 'nearest' }); };
+  const done = text => { saveLocal(); Cloud.schedule(); Sheet.close(); M.changed(); toast(text); };
+  $('#myForm', el).onsubmit = e => {
+    e.preventDefault();
+    const n = { w: val('w'), zh: val('zh'), p: $('#my-p', el).value };
+    if (val('s')) { n.s = val('s'); if (val('sz')) n.sz = val('sz'); if (val('a') && val('a') !== n.w) n.a = val('a'); }
+    const nid = M.prefix + n.w;
+    reloadShared();
+    let err = !n.w ? '請輸入單字。' : !n.zh ? '請輸入意思。' : '';
+    if (!err && nid !== id) err = M.builtin(n.w) ? `單字庫裡本來就有「${n.w}」，用上面的搜尋就找得到。` : S.items[nid] && S.items[nid].c ? `你已經新增過「${n.w}」了。` : '';
+    if (!err) err = M.check(n);
+    if (err) { Sfx.ng(); return msg(err); }
+    const now = Date.now(), prev = id && S.items[id];
+    const r = Object.assign(prev ? JSON.parse(JSON.stringify(prev)) : blankRec(), { c: n, t: now });
+    if (!prev) { r.s = 'queued'; r.q = now; }
+    if (prev && nid !== id) S.items[id] = Object.assign(blankRec(), { t: now });   // 改了單字本身：進度帶到新的，舊的刪掉
+    S.items[nid] = r;
+    done(old ? '已儲存' : '已加到我的單字，並列入考題');
+  };
+  const del = $('#myDel', el);
+  if (del) del.onclick = () => {
+    if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = '確定刪除？'; return; }
+    reloadShared();
+    S.items[id] = Object.assign(blankRec(), { t: Date.now() });   // 留下空白紀錄（帶時間），同步時其他裝置也會刪掉
+    done('已刪除');
+  };
+  if (!c.w) setTimeout(() => $('#my-w', el).focus(), 250);
 }
 // 切換語言選單裡的進度條（lang.js）
 if (window.AppLangs && AppLangs.stats) AppLangs.stats(() => { const c = libCounts(); return { l: c.learned, t: Math.max(1, c.total - c.excluded) }; });
@@ -4919,7 +5024,7 @@ function doSearch(qs) {
   let hits = WORDS.filter(w => IT.stripAccents((w.word + ' ' + w.title + ' ' + w.e[3]).toLowerCase()).includes(qa) || w.zh.includes(qs.trim()) || (q.length > 1 && /^[a-z ]+$/.test(q) && w.en.toLowerCase().includes(q)));
   hits.sort((a, b) => (IT.stripAccents(a.word.toLowerCase()).startsWith(qa) ? 0 : 1) - (IT.stripAccents(b.word.toLowerCase()).startsWith(qa) ? 0 : 1));
   hits = hits.slice(0, 30);
-  if (!hits.length) { box.innerHTML = '<div class="meta">找不到符合的字。</div>'; return; }
+  if (!hits.length) { box.innerHTML = `<div class="meta">找不到符合的字。</div><button class="btn quiet" data-addmine="${esc(qs.trim())}" style="align-self:flex-start">＋ 把「${esc(qs.trim())}」加到我的單字</button>`; return; }
   box.innerHTML = hits.map(w => {
     const r = getRec(w.id);
     const canQ = r.s === 'new' || r.s === 'excluded';
@@ -4957,13 +5062,14 @@ function renderAuthBox() {
 }
 // 從雲端或日文頁合併進來後，只更新不會打斷作答的地方
 function refreshPassive(force) {
+  if (syncMine()) { deck = null; force = true; }   // 別的裝置新增、改了、刪了自己的單字
   renderGoal();
   if (UI.tab === 'lib' && (force || (!$('#bk')?.innerHTML && !document.activeElement?.matches?.('#q')))) renderLib();
   if (force && UI.tab === 'card') renderCard();
 }
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { reloadShared(); renderGoal(); Cloud.schedule(500); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { reloadShared(); refreshPassive(); Cloud.schedule(500); } });
 // 同一台裝置在別的分頁改了進度（例如日文頁）
-window.addEventListener('storage', e => { if (e.key === 'n5:progress') { reloadShared(); renderGoal(); } if (e.key === 'n5:settings') { Object.assign(SET, store.get('n5:settings', {})); applyTheme(); applyGen(); } });
+window.addEventListener('storage', e => { if (e.key === 'n5:progress') { reloadShared(); refreshPassive(); } if (e.key === 'n5:settings') { Object.assign(SET, store.get('n5:settings', {})); applyTheme(); applyGen(); } });
 
 // ================= 首次使用導覽（各語言的文字可以在 config.js 用 tourIntro、tourPron、tourFill 覆寫） =================
 PAGE.tour = {
@@ -5058,6 +5164,7 @@ const Tour = {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card && !Tour.card.hidden) Tour.end(); });
 
 // ================= 啟動 =================
+syncMine();
 applyTheme();
 renderGoal();
 Voice.init();
