@@ -641,6 +641,9 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .dict-pos span{font-weight:400;color:var(--muted)}
 .dict-def{text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;font-size:15px;line-height:1.35;min-height:40px}
 .dict-def[aria-pressed="true"]{border-color:var(--pri)}
+/* 拉起式面板 Sheet 的內容、提醒框（日文頁也用得到；語言頁在 lang-style.css 也有同樣的規則） */
+.sheet-body{overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:0 2px 6px;min-height:0}
+.hl-warn{background:var(--amb);border:1px solid var(--amb-edge);color:var(--amb-ink);border-radius:10px;padding:8px 12px;font-size:15px}
 
 /* 語言頁（義大利文、西班牙文、德文、俄文…）：沿用日文 App 的樣式（建置時從 ../index.html 抽出），這裡只補語言頁需要的部分 */
 :root{--font-ja:var(--font-ui);--font-kana:var(--font-ui)}
@@ -3925,6 +3928,8 @@ const lenCls = t => { const n = String(t).replace(/[\u0300-\u036f]/g, '').length
 const posBadge = w => `<button class="posbtn" data-word="${esc(w.id)}" aria-label="看「${esc(w.word)}」的詞性和變化">${esc(POS_ZH[w.pos])}${w.pos === 'n' && hasGen(w.e[2]) ? '・' + genOf(w.e[2])[1] : ''}<span aria-hidden="true">›</span></button>`;
 
 // ================= 拉起式面板（點字、單字詳細、字母） =================
+// ================= 拉起式面板 Sheet（日文頁和語言頁共用：n5src/shared/sheet.js） =================
+// Sheet.open(標題 HTML, 內容 HTML, 給螢幕閱讀器的名稱) 回傳面板元素；Sheet.close()；Sheet.isOpen()。外觀用 base.css 的 .pk、.sheet-body
 const Sheet = {
   el: null, back: null, prev: null,
   build() {
@@ -5284,7 +5289,8 @@ async function dictLookup(word, lang) {
 // ================= 我的單字：新增／編輯自己的單字（n5src/shared/mine.js） =================
 // 自己新增的字存在進度紀錄的 c 欄位（S.items[id].c），所以會跟著合併和 Google 同步；頁面的 syncMine() 把它們放進 WORDS。
 // 各頁不一樣的地方在 PAGE.mine：
-//   prefix 紀錄 id 的開頭、lang 輸入框的語言代碼、name 語言名稱、posOpts 詞性選項、
+//   prefix 紀錄 id 的開頭、lang 輸入框的語言代碼、name 語言名稱、posOpts 詞性選項（沒有就不顯示詞性）、
+//   readings（日文）：多兩個欄位「讀音」c.r 和「例句的讀法」c.sr、
 //   dict（有才顯示「查字典」，程式在 shared/dict.js）：線上字典用的語言代碼、
 //   builtin(word) 單字庫裡原本就有的同一個字、check(c) 檢查內容（回傳錯誤訊息或 ''）、changed() 存檔或刪除後更新畫面
 // look：打開就先查一次字典（從「查字典並加到我的單字」進來）
@@ -5296,11 +5302,13 @@ function editMine(id, preset, look_) {
   const el = Sheet.open(old ? '編輯我的單字' : '新增自己的單字', `<form id="myForm" class="myform" autocomplete="off" novalidate>
     ${field('w', `單字或片語（${esc(M.name)}）`, c.w, M.lang)}
     ${M.dict ? '<button class="btn quiet" type="button" id="myLook">查字典</button><div class="dictbox" id="myDict" hidden></div>' : ''}
+    ${M.readings ? field('r', '讀音（平假名；單字有漢字才要填）', c.r, M.lang) : ''}
     ${field('zh', '意思', c.zh)}
-    <label class="label" for="my-p">詞性</label>
-    <select id="my-p">${M.posOpts.map(([k, l]) => `<option value="${k}"${(c.p || 'o') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+    ${M.posOpts ? `<label class="label" for="my-p">詞性</label>
+    <select id="my-p">${M.posOpts.map(([k, l]) => `<option value="${k}"${(c.p || 'o') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
     <label class="label" for="my-s">例句（可以不填）</label>
     <textarea id="my-s" lang="${M.lang}" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false">${esc(c.s || '')}</textarea>
+    ${M.readings ? field('sr', '例句的讀法（整句用平假名；可以不填，填了才有振り仮名和拼音）', c.sr, M.lang) : ''}
     ${field('a', '例句裡的寫法（這個字在例句裡有變化才要填）', c.a, M.lang)}
     ${field('sz', '例句的中文（可以不填）', c.sz)}
     <div class="hl-warn" id="myMsg" role="alert" hidden></div>
@@ -5312,8 +5320,10 @@ function editMine(id, preset, look_) {
   const done = text => { saveLocal(); Cloud.schedule(); Sheet.close(); M.changed(); toast(text); };
   $('#myForm', el).onsubmit = e => {
     e.preventDefault();
-    const n = { w: val('w'), zh: val('zh'), p: $('#my-p', el).value };
-    if (val('s')) { n.s = val('s'); if (val('sz')) n.sz = val('sz'); if (val('a') && val('a') !== n.w) n.a = val('a'); }
+    const n = { w: val('w'), zh: val('zh') };
+    if (M.posOpts) n.p = $('#my-p', el).value;
+    if (M.readings && val('r')) n.r = val('r');
+    if (val('s')) { n.s = val('s'); if (val('sz')) n.sz = val('sz'); if (val('a') && val('a') !== n.w) n.a = val('a'); if (M.readings && val('sr')) n.sr = val('sr'); }
     const nid = M.prefix + n.w;
     reloadShared();
     let err = !n.w ? '請輸入單字。' : !n.zh ? '請輸入意思。' : '';
@@ -5351,7 +5361,7 @@ function editMine(id, preset, look_) {
     });
     // 詞性還沒選（其他）時，照字典的第一個詞性選
     const sel = $('#my-p', el);
-    if (r.defs.length && sel.value === 'o' && M.posOpts.some(o => o[0] === r.defs[0].p)) sel.value = r.defs[0].p;
+    if (sel && r.defs.length && sel.value === 'o' && M.posOpts.some(o => o[0] === r.defs[0].p)) sel.value = r.defs[0].p;
   };
   if (look) { look.onclick = runLook; if (look_ && !old && c.w) runLook(); }
   const del = $('#myDel', el);

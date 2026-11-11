@@ -639,6 +639,9 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .dict-pos span{font-weight:400;color:var(--muted)}
 .dict-def{text-align:left;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:8px 10px;font-size:15px;line-height:1.35;min-height:40px}
 .dict-def[aria-pressed="true"]{border-color:var(--pri)}
+/* 拉起式面板 Sheet 的內容、提醒框（日文頁也用得到；語言頁在 lang-style.css 也有同樣的規則） */
+.sheet-body{overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:0 2px 6px;min-height:0}
+.hl-warn{background:var(--amb);border:1px solid var(--amb-edge);color:var(--amb-ink);border-radius:10px;padding:8px 12px;font-size:15px}
 </style>
 </head><body>
 <header class="top"><div class="wrap">
@@ -3940,6 +3943,51 @@ const TOKS = {};
 const toksOf = w => TOKS[w.id] || (TOKS[w.id] = tokenizeWord(w, GLOSS));
 const CMAP = confuseMap();
 const ALL_IDS = KANA.map(k => k.id).concat(WORDS.map(w => w.id));
+// ---- 我的單字（自己新增的字）----
+// 定義放在這個字的進度紀錄裡：S.items['v:my:' + 單字].c = { w 單字, r 讀音, zh 意思, s 例句, sr 例句的讀法, sz 例句中文, a 例句裡的寫法 }
+// 合併和 Google 同步都和一般紀錄一樣；刪除＝換成沒有 c 的空白紀錄。表單在 shared/mine.js，語言頁的做法見 lang-app.js。
+const MY = 'v:my:';
+const KANA_ONLY = /^[ぁ-ゖァ-ヺー・]+$/;
+// 把定義變成和內建單字一樣的資料；內容有問題時回傳 { err: 說明 }
+function myWord(id, c) {
+  const word = c.w, reading = c.r || c.w;
+  if (!KANA_ONLY.test(reading)) return { err: c.r ? '讀音請全部用假名（平假名或片假名）。' : `「${word}」有漢字，請在「讀音」填它的假名。` };
+  const wsegs = align(word, reading);
+  if (!wsegs) return { err: `讀音「${reading}」和「${word}」對不起來，請檢查假名的部分是不是一樣。` };
+  const sent = c.s || word, ans = c.s && c.a ? c.a : word;
+  const at = sent.indexOf(ans);
+  if (at < 0) return { err: `例句裡找不到「${ans}」。如果這個字在例句裡有變化（例如 食べる → 食べます），請在「例句裡的寫法」填上例句裡的樣子。` };
+  // 沒寫讀法的漢字：r 是空字串（不標振り仮名、拼音裡略過）；假名和標點 r 是 null
+  const raw = t => tokenize(t).map(x => ({ t: x.t, r: x.k ? '' : null }));
+  let segs;
+  if (!c.s) segs = wsegs.map(x => Object.assign({}, x));
+  else if (c.sr) {
+    segs = align(sent, c.sr);
+    if (!segs) return { err: '「例句的讀法」和例句對不起來。請把整句用平假名寫一次（片假名和標點照原樣），或先留空。' };
+  } else segs = raw(sent.slice(0, at)).concat(ans === word ? wsegs.map(x => Object.assign({}, x)) : raw(ans), raw(sent.slice(at + ans.length)));
+  let a0 = -1, a1 = -1, pos0 = 0;
+  for (let i = 0; i < segs.length; i++) { const st = pos0, en = pos0 + segs[i].t.length; if (st === at) a0 = i; if (en === at + ans.length) a1 = i + 1; pos0 = en; }
+  if (a0 < 0 || a1 <= a0) return { err: `「${ans}」在例句裡要是完整的一段（不能切在一個漢字詞的中間）。` };
+  if (segs.slice(a0, a1).some(x => x.r === '')) return { err: `「${ans}」有漢字，填空要知道它怎麼唸：請填「例句的讀法」。` };
+  const ansR = segs.slice(a0, a1).map(x => x.r === null ? x.t : x.r).join('');
+  return { id, word, reading, romaji: kanaToRoma(reading), pos: '我的單字', pg: '我的單字', zh: c.zh, en: '', sent, sentR: segs.map(x => x.r || x.t).join(''), sentZh: c.s ? (c.sz || '') : c.zh,
+    ans, segs, wsegs, a0, a1, ansR, kind: 'w', custom: true, noR: segs.some(x => x.r === '') };
+}
+// 讓 WORDS 跟 S 裡的「我的單字」一致（啟動、存檔、從雲端合併進來之後都要跑）；有變動回傳 true
+function syncMine() {
+  const want = {};
+  for (const id in S.items) if (id.startsWith(MY)) { const c = S.items[id] && S.items[id].c; if (c && c.w && c.zh) { const w = myWord(id, c); if (!w.err) want[id] = w; } }
+  let changed = false;
+  const drop = (arr, id) => { const i = arr.findIndex(x => (x.id || x) === id); if (i >= 0) arr.splice(i, 1); };
+  for (const w of WORDS.filter(w => w.custom && !want[w.id])) { drop(WORDS, w.id); drop(ALL_IDS, w.id); delete WMAP[w.id]; delete TOKS[w.id]; changed = true; }
+  for (const id in want) {
+    const nw = want[id], old = WMAP[id], key = w => JSON.stringify([w.word, w.reading, w.zh, w.sent, w.sentR, w.sentZh, w.ans]);
+    if (!old) { WORDS.push(nw); ALL_IDS.push(id); WMAP[id] = nw; changed = true; }
+    else if (key(old) !== key(nw)) { Object.assign(old, nw); delete TOKS[id]; changed = true; }
+  }
+  if (changed) { PITEMS = null; }
+  return changed;
+}
 
 // ================= 進度與設定 =================
 let S = store.get('n5:progress', null);
@@ -4198,6 +4246,7 @@ function wordPool(src) {
     mcReview: w => wrongOf(w.id, 'mc') === 2,
     fillWrong: w => wrongOf(w.id, 'fill') === 1,
     fillReview: w => wrongOf(w.id, 'fill') === 2,
+    mine: w => !!w.custom,
     dictWrong: w => wrongOf(w.id, 'dict') === 1,
     excluded: w => getRec(w.id).s === 'excluded'
   }[src];
@@ -4234,7 +4283,7 @@ function openGloss(el) {
     ${romajiLine(info.romaji)}
     <div class="gl-zh"><span class="pos">${esc(info.pos)}</span> ${info.w ? meanW(info.w) : esc(info.zh)}</div>
     ${surface && surface !== info.word && form ? `<div class="meta">句中的「<span class="ja">${esc(surface)}</span>」：${esc(form)}</div>` : ''}
-    <div class="row">${playBtn(info.reading, '發音')}${info.w && info.w.pg !== '文法' ? `<button class="btn quiet" data-forms="${esc(info.w.id)}" style="min-height:44px">變化形・詞性</button>` : ''}${r ? `<span class="st ${r.s}">${STATUS_TXT[r.s] || '未學'}</span>` : ''}${r && (r.s === 'new' || r.s === 'excluded') ? `<button class="btn" id="glQ" style="min-height:44px">列入考題</button>` : ''}</div>`;
+    <div class="row">${playBtn(info.reading, '發音')}${info.w && info.w.pg !== '文法' ? `<button class="btn quiet" data-forms="${esc(info.w.id)}" style="min-height:44px">${info.w.custom ? '編輯' : '變化形・詞性'}</button>` : ''}${r ? `<span class="st ${r.s}">${STATUS_TXT[r.s] || '未學'}</span>` : ''}${r && (r.s === 'new' || r.s === 'excluded') ? `<button class="btn" id="glQ" style="min-height:44px">列入考題</button>` : ''}</div>`;
   p.hidden = false;
   $('.gl-x', p).onclick = closeGloss;
   const q = $('#glQ', p);
@@ -4259,6 +4308,7 @@ document.addEventListener('keydown', e => {
 // ================= 語法補充 =================
 const lvRank = lv => GLOSS_LEVELS.length - GLOSS_LEVELS.indexOf(lv); // N5=1 … N1=5
 function grammarFor(w) {
+  if (w.custom) return { all: [], shown: [], hidden: 0 };
   const all = grammarOf(w, toksOf(w), GLOSS);
   const cut = SET.knownLv ? lvRank(SET.knownLv) : 0;
   const shown = all.filter(g => lvRank(g.p.lv) > cut);
@@ -4371,6 +4421,10 @@ function formExamplesHTML(w, row) {
   return parts.join('') || '<p class="meta">還沒有這個形的例句。</p>';
 }
 document.addEventListener('click', e => {
+  const am = e.target.closest('[data-addmine]');
+  if (am) { e.preventDefault(); closeGloss(); return editMine('', am.dataset.addmine, true); }
+  const fm = e.target.closest('[data-forms]');
+  if (fm && WMAP[fm.dataset.forms] && WMAP[fm.dataset.forms].custom) { e.preventDefault(); closeGloss(); return editMine(fm.dataset.forms); }   // 自己新增的字沒有變化表：直接開編輯
   const b = e.target.closest('[data-forms]');
   if (b) { e.preventDefault(); e.stopPropagation(); openForms(b.dataset.forms); }
 }, true);
@@ -4724,7 +4778,7 @@ function particleItems() {
   if (PITEMS) return PITEMS;
   PITEMS = [];
   for (const w of WORDS) {
-    if (w.kind !== 'w' || w.pg === '招呼語與常用句') continue;
+    if (w.kind !== 'w' || w.custom || w.pg === '招呼語與常用句') continue;
     for (const t of toksOf(w)) {
       const p = t.e && t.e.startsWith('f:') ? t.e.slice(2) : '';
       if (!PARTICLES.includes(p) || t.s1 - t.s0 !== [...p].length) continue;
@@ -5085,7 +5139,7 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', () =
 // 聽單字的發音，打出假名（或拼音、漢字）。不影響「已學會」，答錯的字會進「聽寫錯題」。
 let dictRound = null;
 const DICT_SRCS = [['learn', '待考'], ['recent', '最近學過'], ['dictWrong', '聽寫錯題'], ['learned', '複習已學會']];
-const dictPool = src => srcPool(src).filter(w => w.pg !== '文法');
+const dictPool = src => srcPool(src).filter(w => w.pg !== '文法' && !w.noR);   // 自己新增、例句沒寫讀法的字不出聽寫
 function renderDict() {
   const host = $('#tab-fill');
   const counts = Object.fromEntries(DICT_SRCS.map(([k]) => [k, dictPool(k).length]));
@@ -5175,7 +5229,45 @@ function nextDictQ(keepFocus) {
 
 // ================= 單字庫 =================
 // 這一頁和語言頁不一樣的地方（共用的分頁程式用 PAGE.…）
+// @include shared/sheet.js（這一段由 build.js 從 n5src/shared/sheet.js 複製過來，要改請改那個檔再跑 build.js）
+// ================= 拉起式面板 Sheet（日文頁和語言頁共用：n5src/shared/sheet.js） =================
+// Sheet.open(標題 HTML, 內容 HTML, 給螢幕閱讀器的名稱) 回傳面板元素；Sheet.close()；Sheet.isOpen()。外觀用 base.css 的 .pk、.sheet-body
+const Sheet = {
+  el: null, back: null, prev: null,
+  build() {
+    this.back = document.createElement('div'); this.back.className = 'pk-back'; this.back.hidden = true;
+    this.el = document.createElement('div'); this.el.className = 'pk'; this.el.hidden = true;
+    this.el.setAttribute('role', 'dialog'); this.el.setAttribute('aria-modal', 'true');
+    document.body.append(this.back, this.el);
+    this.back.onclick = () => this.close();
+    this.el.addEventListener('click', e => { if (e.target.closest('.pk-x')) this.close(); });
+  },
+  open(title, body, label) {
+    if (!this.el) this.build();
+    if (this.el.hidden) this.prev = document.activeElement;
+    this.el.setAttribute('aria-label', label || title.replace(/<[^>]+>/g, ''));
+    this.el.innerHTML = `<div class="pk-grab" aria-hidden="true"></div><div class="pk-top"><b>${title}</b><button class="pk-x" aria-label="關閉">${ICON.ng}</button></div><div class="sheet-body">${body}</div>`;
+    this.back.hidden = false; this.el.hidden = false;
+    requestAnimationFrame(() => { this.back.classList.add('in'); this.el.classList.add('in'); $('.pk-x', this.el).focus({ preventScroll: true }); });
+    return this.el;
+  },
+  close() {
+    if (!this.el || this.el.hidden) return;
+    this.back.classList.remove('in'); this.el.classList.remove('in');
+    setTimeout(() => { this.back.hidden = true; this.el.hidden = true; }, 180);
+    if (this.prev && document.contains(this.prev)) try { this.prev.focus({ preventScroll: true }); } catch (e) {}
+  },
+  isOpen() { return this.el && !this.el.hidden; }
+};
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && Sheet.isOpen()) { e.stopPropagation(); Sheet.close(); } }, true);
+// @end shared/sheet.js
 const PAGE = {
+  mine: {
+    prefix: MY, lang: 'ja', name: '日文', dict: 'ja', readings: true,
+    builtin: word => WORDS.find(w => !w.custom && w.kind === 'w' && w.word === word),
+    check: c => myWord('', c).err || '',
+    changed: () => { syncMine(); deck = null; refreshPassive(); if (UI.tab === 'lib') renderLib(); if (UI.tab === 'card') renderCard(); }
+  },
   voice: {
     GOOD: /natural|neural|premium|enhanced|online|google|siri|高品質|拡張|強化/i,
     BAD: /desktop|ichiro|ayumi|haruka|sayaka|espeak|compact/i,   // 很機械的舊日文語音
@@ -5517,6 +5609,144 @@ function fillList(d) {
   });
 }
 // @end shared/lib-tab.js
+// @include shared/dict.js（線上查字典）
+// ================= 線上查字典（n5src/shared/dict.js） =================
+// 給「我的單字」表單用：查英文解釋（英文版 Wiktionary 的 REST API，依語言分好）和中文翻譯（MyMemory，機器翻譯）。
+// 兩個服務都不用金鑰、允許網頁直接連（CORS）；sw.js 不會快取這些連線，沒網路就查不到。
+// 這個檔不用頁面的變數（只用 fetch），所以 n5src/dict-test.js 可以直接測。
+const DICT_POS = { Noun: ['名詞', 'n'], 'Proper noun': ['專有名詞', 'n'], Verb: ['動詞', 'v'], Adjective: ['形容詞', 'adj'], Adverb: ['副詞', 'o'], Preposition: ['介係詞', 'o'], Pronoun: ['代名詞', 'o'], Conjunction: ['連接詞', 'o'], Interjection: ['感嘆詞', 'o'], Determiner: ['限定詞', 'o'], Article: ['冠詞', 'o'], Numeral: ['數詞', 'o'], Particle: ['助詞', 'o'], Phrase: ['片語', 'o'], Idiom: ['慣用語', 'o'], 'Prepositional phrase': ['介係詞片語', 'o'], Proverb: ['諺語', 'o'] };
+// Wiktionary 的解釋是 HTML：拿掉標籤，留下文字
+const dictText = h => String(h || '').replace(/<style[\s\S]*?<\/style>/gi, '').replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#0?39;|&apos;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+// 回傳 JSON；查不到（404 等）回傳 null；連不上或逾時回傳 undefined
+async function dictFetch(url, ms = 8000) {
+  const ac = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timer = setTimeout(() => ac && ac.abort(), ms);
+  try { const r = await fetch(url, ac ? { signal: ac.signal } : {}); return r.ok ? await r.json() : null; }
+  catch (e) { return undefined; }
+  finally { clearTimeout(timer); }
+}
+// 回傳 { defs: [{ pos, zh 詞性中文, p 詞性分組, defs: [英文解釋…] }], zh: [中文翻譯…], offline: 兩個服務都連不上 }
+async function dictLookup(word, lang) {
+  word = String(word).trim().replace(/\s+/g, ' ');
+  // Wiktionary 的條目分大小寫（德文名詞大寫、句首的字小寫），照打的、全小寫、首字大寫各試一次
+  const forms = [...new Set([word, word.toLowerCase(), word.charAt(0).toUpperCase() + word.slice(1)])];
+  const wik = (async () => {
+    for (const f of forms) {
+      const j = await dictFetch('https://en.wiktionary.org/api/rest_v1/page/definition/' + encodeURIComponent(f.replace(/ /g, '_')));
+      if (j === undefined) return undefined;
+      if (j && Array.isArray(j[lang]) && j[lang].length) return j[lang];
+    }
+    return [];
+  })();
+  const mm = dictFetch('https://api.mymemory.translated.net/get?q=' + encodeURIComponent(word) + '&langpair=' + lang + '|zh-TW');
+  const [w, m] = await Promise.all([wik, mm]);
+  const defs = [];
+  for (const e of w || []) {
+    const ds = (e.definitions || []).map(d => dictText(d.definition)).filter(Boolean).slice(0, 3);
+    const info = DICT_POS[e.partOfSpeech] || [e.partOfSpeech || '', 'o'];
+    if (ds.length) defs.push({ pos: e.partOfSpeech || '', zh: info[0], p: info[1], defs: ds });
+  }
+  // 中文：只留真的有中文字、不太長的；同一個字的翻譯記憶先看品質分數，最後才是整句的機器翻譯
+  const zh = [], han = s => /[一-鿿]/.test(s) && s.length <= 20;
+  const add = s => { s = String(s || '').trim().replace(/\s+/g, ''); if (han(s) && !zh.includes(s)) zh.push(s); };
+  if (m && Array.isArray(m.matches)) {
+    m.matches.filter(x => String(x.segment || '').trim().toLowerCase() === word.toLowerCase())
+      .sort((a, b) => (Number(b.quality) || 0) - (Number(a.quality) || 0) || (b.match || 0) - (a.match || 0))
+      .forEach(x => add(x.translation));
+  }
+  if (m && m.responseData) add(m.responseData.translatedText);
+  return { defs: defs.slice(0, 4), zh: zh.slice(0, 3), offline: w === undefined && m === undefined };
+}
+// @end shared/dict.js
+// @include shared/mine.js（我的單字的表單）
+// ================= 我的單字：新增／編輯自己的單字（n5src/shared/mine.js） =================
+// 自己新增的字存在進度紀錄的 c 欄位（S.items[id].c），所以會跟著合併和 Google 同步；頁面的 syncMine() 把它們放進 WORDS。
+// 各頁不一樣的地方在 PAGE.mine：
+//   prefix 紀錄 id 的開頭、lang 輸入框的語言代碼、name 語言名稱、posOpts 詞性選項（沒有就不顯示詞性）、
+//   readings（日文）：多兩個欄位「讀音」c.r 和「例句的讀法」c.sr、
+//   dict（有才顯示「查字典」，程式在 shared/dict.js）：線上字典用的語言代碼、
+//   builtin(word) 單字庫裡原本就有的同一個字、check(c) 檢查內容（回傳錯誤訊息或 ''）、changed() 存檔或刪除後更新畫面
+// look：打開就先查一次字典（從「查字典並加到我的單字」進來）
+function editMine(id, preset, look_) {
+  const M = PAGE.mine;
+  const old = id && S.items[id] && S.items[id].c;
+  const c = old || { w: preset || '', zh: '', p: 'o' };
+  const field = (k, label, val, lang) => `<label class="label" for="my-${k}">${label}</label><input id="my-${k}" type="text" value="${esc(val || '')}"${lang ? ` lang="${lang}"` : ''} autocapitalize="off" autocorrect="off" spellcheck="false">`;
+  const el = Sheet.open(old ? '編輯我的單字' : '新增自己的單字', `<form id="myForm" class="myform" autocomplete="off" novalidate>
+    ${field('w', `單字或片語（${esc(M.name)}）`, c.w, M.lang)}
+    ${M.dict ? '<button class="btn quiet" type="button" id="myLook">查字典</button><div class="dictbox" id="myDict" hidden></div>' : ''}
+    ${M.readings ? field('r', '讀音（平假名；單字有漢字才要填）', c.r, M.lang) : ''}
+    ${field('zh', '意思', c.zh)}
+    ${M.posOpts ? `<label class="label" for="my-p">詞性</label>
+    <select id="my-p">${M.posOpts.map(([k, l]) => `<option value="${k}"${(c.p || 'o') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>` : ''}
+    <label class="label" for="my-s">例句（可以不填）</label>
+    <textarea id="my-s" lang="${M.lang}" rows="2" autocapitalize="off" autocorrect="off" spellcheck="false">${esc(c.s || '')}</textarea>
+    ${M.readings ? field('sr', '例句的讀法（整句用平假名；可以不填，填了才有振り仮名和拼音）', c.sr, M.lang) : ''}
+    ${field('a', '例句裡的寫法（這個字在例句裡有變化才要填）', c.a, M.lang)}
+    ${field('sz', '例句的中文（可以不填）', c.sz)}
+    <div class="hl-warn" id="myMsg" role="alert" hidden></div>
+    <div class="btnrow${old ? '' : ' one'}">${old ? '<button class="btn quiet" type="button" id="myDel">刪除</button>' : ''}<button class="btn solid" type="submit">儲存</button></div>
+    <p class="meta" style="margin:0">存好後會直接列入考題，字卡、單選、填空都會出；沒有例句時，填空直接考這個字。用 Google 登入會同步到其他裝置；備份碼不包含自己新增的單字。${M.dict ? '按「查字典」時，這個字會送到 Wiktionary 和 MyMemory 兩個免費服務去查。' : ''}</p>
+  </form>`);
+  const val = k => $('#my-' + k, el).value.trim().replace(/\s+/g, ' ');
+  const msg = t => { const m = $('#myMsg', el); m.textContent = t; m.hidden = !t; if (t) m.scrollIntoView({ block: 'nearest' }); };
+  const done = text => { saveLocal(); Cloud.schedule(); Sheet.close(); M.changed(); toast(text); };
+  $('#myForm', el).onsubmit = e => {
+    e.preventDefault();
+    const n = { w: val('w'), zh: val('zh') };
+    if (M.posOpts) n.p = $('#my-p', el).value;
+    if (M.readings && val('r')) n.r = val('r');
+    if (val('s')) { n.s = val('s'); if (val('sz')) n.sz = val('sz'); if (val('a') && val('a') !== n.w) n.a = val('a'); if (M.readings && val('sr')) n.sr = val('sr'); }
+    const nid = M.prefix + n.w;
+    reloadShared();
+    let err = !n.w ? '請輸入單字。' : !n.zh ? '請輸入意思。' : '';
+    if (!err && nid !== id) err = M.builtin(n.w) ? `單字庫裡本來就有「${n.w}」，用上面的搜尋就找得到。` : S.items[nid] && S.items[nid].c ? `你已經新增過「${n.w}」了。` : '';
+    if (!err) err = M.check(n);
+    if (err) { Sfx.ng(); return msg(err); }
+    const now = Date.now(), prev = id && S.items[id];
+    const r = Object.assign(prev ? JSON.parse(JSON.stringify(prev)) : blankRec(), { c: n, t: now });
+    if (!prev) { r.s = 'queued'; r.q = now; }
+    if (prev && nid !== id) S.items[id] = Object.assign(blankRec(), { t: now });   // 改了單字本身：進度帶到新的，舊的刪掉
+    S.items[nid] = r;
+    done(old ? '已儲存' : '已加到我的單字，並列入考題');
+  };
+  // ---- 查字典：結果點一下填進「意思」----
+  const look = $('#myLook', el), dbox = $('#myDict', el);
+  let seq = 0;
+  const runLook = async () => {
+    const word = val('w');
+    if (!word) { $('#my-w', el).focus(); return; }
+    const my = ++seq;
+    look.disabled = true; look.textContent = '查詢中…';
+    dbox.hidden = false; dbox.innerHTML = '<p class="meta" style="margin:0">正在查「' + esc(word) + '」…</p>';
+    const r = await dictLookup(word, M.dict);
+    if (my !== seq || !document.contains(dbox)) return;   // 查的時候又按了一次，或面板已經關了
+    look.disabled = false; look.textContent = '再查一次';
+    if (r.offline) { dbox.innerHTML = '<p class="meta" style="margin:0">連不上字典，請確認網路後再試。意思可以先自己填。</p>'; return; }
+    if (!r.defs.length && !r.zh.length) { dbox.innerHTML = '<p class="meta" style="margin:0">字典裡查不到「' + esc(word) + '」（可以檢查拼字，或改查原形）。意思可以自己填。</p>'; return; }
+    dbox.innerHTML = (r.zh.length ? `<div class="label">中文（機器翻譯，可能不準）</div><div class="chips dict-zh">${r.zh.map(z => `<button type="button" class="chip" data-fill="${esc(z)}">${esc(z)}</button>`).join('')}</div>` : '') +
+      (r.defs.length ? `<div class="label">英文解釋（Wiktionary）</div>${r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div>${d.defs.map(x => `<button type="button" class="dict-def" lang="en" data-fill="${esc(x)}">${esc(x)}</button>`).join('')}`).join('')}` : '') +
+      '<p class="meta" style="margin:0">點一下就會填進「意思」，填完還可以自己改。</p>';
+    $$('[data-fill]', dbox).forEach(b => b.onclick = () => {
+      const inp = $('#my-zh', el), t = b.dataset.fill, cur = inp.value.trim();
+      if (!cur) inp.value = t; else if (!cur.split('；').includes(t)) inp.value = cur + '；' + t;
+      b.setAttribute('aria-pressed', 'true'); msg('');
+    });
+    // 詞性還沒選（其他）時，照字典的第一個詞性選
+    const sel = $('#my-p', el);
+    if (sel && r.defs.length && sel.value === 'o' && M.posOpts.some(o => o[0] === r.defs[0].p)) sel.value = r.defs[0].p;
+  };
+  if (look) { look.onclick = runLook; if (look_ && !old && c.w) runLook(); }
+  const del = $('#myDel', el);
+  if (del) del.onclick = () => {
+    if (!del.dataset.sure) { del.dataset.sure = '1'; del.textContent = '確定刪除？'; return; }
+    reloadShared();
+    S.items[id] = Object.assign(blankRec(), { t: Date.now() });   // 留下空白紀錄（帶時間），同步時其他裝置也會刪掉
+    done('已刪除');
+  };
+  if (!c.w) setTimeout(() => $('#my-w', el).focus(), 250);
+}
+// @end shared/mine.js
 // 切換語言選單裡的進度條（lang.js）
 if (window.AppLangs && AppLangs.stats) AppLangs.stats(() => { const c = libCounts(); return { l: c.learned, t: Math.max(1, c.total - c.excluded) }; });
 const STATUS_TXT = { new: '未學', queued: '待考', learned: '已學會', excluded: '已排除' };
@@ -5527,7 +5757,7 @@ function doSearch(qs) {
   const kq = normKana(romaToKana(q, true));
   const rq = q.replace(/[\s']/g, '');
   const hits = WORDS.filter(w => w.word.includes(qs.trim()) || normKana(w.reading).includes(normKana(qs.trim())) || (kq && normKana(w.reading).includes(kq)) || w.romaji.replace(/[\s']/g, '').includes(rq) || w.zh.includes(qs.trim()) || (q.length > 1 && /^[a-z ]+$/.test(q) && new RegExp('\\b' + q).test(w.en.toLowerCase()))).slice(0, 30);
-  if (!hits.length) { box.innerHTML = '<div class="meta">找不到符合的字。</div>'; return; }
+  if (!hits.length) { box.innerHTML = `<div class="meta">找不到符合的字。</div><button class="btn quiet" data-addmine="${esc(qs.trim())}" style="align-self:flex-start">查字典並把「${esc(qs.trim())}」加到我的單字</button>`; return; }
   box.innerHTML = hits.map(w => {
     const r = getRec(w.id);
     const canQ = r.s === 'new' || r.s === 'excluded';
@@ -5567,6 +5797,7 @@ function renderAuthBox() {
 const GOOGLE_G = '<svg viewBox="0 0 48 48" width="18" height="18" aria-hidden="true"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>';
 // 從雲端合併後，只更新不會打斷作答的地方
 function refreshPassive() {
+  if (syncMine()) deck = null;   // 別的裝置新增、改了、刪了自己的單字
   renderGoal();
   if (UI.tab === 'kana' && UI.kanaView === 'table') renderKana();
   if (UI.tab === 'lib' && !$('#q')?.value && !$('#bk')?.innerHTML) renderLib();
@@ -5649,7 +5880,7 @@ function gramIndex() {
   if (GIDX) return GIDX;
   GIDX = {};
   for (const w of WORDS) {
-    if (w.kind !== 'w') continue;
+    if (w.kind !== 'w' || w.custom) continue;
     for (const g of grammarOf(w, toksOf(w), GLOSS)) (GIDX[g.p.id] = GIDX[g.p.id] || []).push({ w, s: g.s });
   }
   // 短句優先，比較好讀；同一句只留一次
@@ -6535,6 +6766,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card 
 // @end shared/tour.js
 
 // ================= 啟動 =================
+syncMine();
 applyTheme();
 applyRomaji();
 applyFuri();
