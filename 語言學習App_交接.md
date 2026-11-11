@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v96'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v97'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -128,6 +128,13 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **我的單字的表單變簡單**（全部語言）：一開始只露出「單字、意思」（日文單字有漢字時多一欄「讀音」）。打完單字（離開欄位或按 Enter）就自動查字典，第一個中文翻譯直接填進意思（沒有中文就填第一個英文解釋），日文連讀音也自動填；不對可以直接改，或點其他的意思換掉（第一次點是換掉自動填的，之後點是接在後面）。原本的「查字典」按鈕拿掉了，連不上時有「再查一次」。
+  - 例句、例句的中文、詞性、（日文）例句的讀法、例句裡的寫法都收在「更多」裡；編輯有例句或詞性的字時「更多」預設打開，錯誤訊息跟例句有關時也會自動打開。英文解釋預設收起來（沒有中文翻譯時才打開）。
+  - **例句裡的寫法不用填了**：存檔時例句裡找不到原形，就用 `PAGE.mine.guessForm` 猜。語言頁找開頭最像的字（共同字首至少 min(字長, max(2, 字長-3)) 個字母，whisker → whiskers、усы → усами）；日文頁取語幹（去掉後面的平假名）加上後面接的平假名，去掉結尾的です／助詞（食べる → 食べました）。猜了要能通過 check 才用，不然照舊提示。
+  - **日文的變化形不用填例句的讀法了**：`inflectedReading(word, reading, form)` 用單字的讀音推出變化形怎麼唸（剃る／そる → 剃ります／そります），所以填空、拼音作答都能用。推不出來（語幹不同）時才要求填例句的讀法。
+  - 日文讀音：`dictReading(word)`（shared/dict.js）抓英文版 Wiktionary 條目原始碼（`w/api.php?action=query&prop=revisions…&formatversion=2&origin=*`），在 ==Japanese== 那段找 `{{ja-pos|noun|ひげ}}`、`{{ja-noun|…}}`、`{{ja-verb|type=1|そる}}` 這類標籤裡的假名（拿掉 . - ^ 等記號）；日文頁再用 align() 確認對得上單字才填。**這個抓讀音的方法沒有用真的網路試過**（這次連不上 Wiktionary），格式是照 Wiktionary 的標籤慣例寫的；抓不到就留空讓使用者自己填，不會出錯。
+  - 測試：dict-test.js 加了讀音的 6 項；mine-e2e.js、mine-ja-e2e.js 改成新的流程（自動填、更多、自動找變化形、變化形用拼音答對）。
 
 - **日文頁的我的造句**：日文頁沒有單字詳細頁，所以造句是一個獨立的面板（`openSents(id)`）。入口有四個：字卡上的「用這個字造句（n）」、點例句的字跳出的小框裡的「造句」、單字庫搜尋結果的「造句」、單字庫清單的「我的造句」。文法條目沒有造句。
   - 句子裡有沒有用到這個字：看原形、假名寫法，或斷詞後認得的變化形（食べる → 食べました）；沒看到只提醒，還是會存。存好的句子是純文字（不標振り仮名、不能點字），可以按喇叭聽。
