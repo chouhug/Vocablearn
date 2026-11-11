@@ -3676,7 +3676,7 @@ const LD = {
 '原形': 'base form', '單複數同形': 'same in singular and plural', '名詞前的縮短形': 'short form before a noun',
 '陽性單數': 'masculine singular', '陰性單數': 'feminine singular', '陽性複數': 'masculine plural', '陰性複數': 'feminine plural', '中性單數': 'neuter singular',
 '過去分詞': 'past participle', '過去分詞（陰性）': 'past participle (f.)', '過去分詞（陽性複數）': 'past participle (m. pl.)', '過去分詞（陰性複數）': 'past participle (f. pl.)',
-'反身動詞': 'Reflexive verb', '規則動詞': 'Regular verb',
+'反身動詞': 'Reflexive verb', '副動詞': 'gerund', '副動詞（-ando／-iendo）': 'gerund (-ando / -iendo)', '規則動詞': 'Regular verb',
 // ---- 上方、分頁、發音 ----
 '名詞上的性別標示': 'Gender marks on nouns', '名詞上的性別：開': 'Noun gender: on', '名詞上的性別：關': 'Noun gender: off',
 '名詞上方標出性別': 'Showing gender above nouns', '已隱藏性別，點單字可以看詞性': 'Gender hidden — tap a word to see its part of speech',
@@ -3747,10 +3747,12 @@ const T = x => E.content[x] ?? E.dict[x] ?? x;
 const LNS = '(日語|日文|義大利文|西班牙文|德文|俄文|英文)';
 const RX = src => new RegExp(src.replace(/LN/g, LNS));
 R(/^「(.+)」的一部分$/, 'part of “$1”');
-R(/^(現在式|過去式|命令式|將來式|過去分詞|現在分詞|條件式) (.+)$/, (m, a, b) => `${E.dict[a] ?? a} ${b}`);
+R(/^(現在式|過去式|命令式|將來式|過去分詞|現在分詞|條件式|副動詞) (.+)$/, (m, a, b) => `${E.dict[a] ?? a} ${b}`);
 R(/^原形（不加 (.+)）$/, 'base form (without $1)');
 R(/^過去式用 (.+)$/, 'past tense with $1');
 R(/^(.+?) 規則動詞$/, '$1 regular verb');
+R(/^(-\S+) 動詞$/, '$1 verb');
+R(/^詞幹變化 (.+)$/, 'stem change $1');
 R(/^(義|西|德|俄|英)→中$/, (m, a) => `${SH[a]} → meaning`);
 R(/^中→(義|西|德|俄|英)$/, (m, a) => `Meaning → ${SH[a]}`);
 R(RX('^歡迎使用LN (\\S+)$'), (m, a, l) => `Welcome to ${N(a)} ${l}`);
