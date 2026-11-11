@@ -2586,11 +2586,12 @@ const GRAMMAR_MORE = [
   GRAMMAR.push(...GRAMMAR_MORE.map(a => a.slice(0, 9)));
 })();
 
-// ===== 介面英文對照（設定 → 介面語言 選 English 時使用）=====
+// ===== 介面英文對照（設定 → 介面語言 選 English 時使用；日文頁和語言頁共用：n5src/i18n-ui.js）=====
+// 語言頁另外加 lang-i18n.js（語言頁才有的介面文字）和各語言的 i18n.js（文法說明、例句翻譯這些內容）
 // 程式裡的介面文字都用中文寫；畫面上出現的中文會照這裡換成英文（日文區塊不會動）。
 // dict：整段中文 → 英文。re：含數字或可變內容的句子，用正規表示式比對。
 // 例句翻譯（I18N_SENT）和五十音例字（kanaEx）在檔案最後，由 build 前整理好的清單產生。
-const I18N = { en: { dict: {}, re: [], kanaEx: {} } };
+const I18N = { en: { dict: {}, re: [], kanaEx: {}, content: {}, title: '' } };
 (() => {
 const D = {
 // ---- 上方、分頁 ----
@@ -2938,6 +2939,8 @@ Object.assign(I18N.en.dict, D);
 I18N.en.re = re;
 })();
 
+// ===== 日文頁的英文對照（介面共用的部分在 n5src/i18n-ui.js）=====
+I18N.en.title = 'Japanese N5 · Vocablearn';
 // ===== 例句翻譯（中文 → English，對應 vocab.js、vocab2.js 與變化形例句）=====
 Object.assign(I18N.en.dict, {
 "我是學生。": "I am a student.",
@@ -4056,12 +4059,14 @@ const saveLocal = () => store.set('n5:progress', S);
 function reloadShared() { const cur = store.get('n5:progress', null); if (cur && cur.items) S = mergeState(S, cur); }
 const getRec = id => S.items[id] || blankRec();
 
-// ================= 介面語言（中文／English） =================
-// 程式裡的介面文字都寫中文；選 English 時，畫面上的中文由 i18n.js 的對照表即時換成英文。
-// 日文（lang="ja" 的區塊）不會動。換語言時重新載入頁面，避免中英混雜。
+// @include shared/i18n.js（介面語言；這一段由 build.js 從 n5src/shared/i18n.js 複製過來）
+// ================= 介面語言（中文／English；日文頁和語言頁共用：n5src/shared/i18n.js） =================
+// 程式裡的介面文字都寫中文；選 English 時，畫面上的中文由對照表（I18N.en：i18n-ui.js、ja/i18n.js、lang-i18n.js、各語言的 i18n.js）即時換成英文。
+// 學的語言（有 lang="ja"、lang="it"… 的區塊，或 class="ja"）不會動。換語言時重新載入頁面，避免中英混雜。
+// 用頁面的 SET（設定 lang）；要在 SET 後面、畫面出來前載入。
 const LANG = SET.lang === 'en' && typeof I18N !== 'undefined' ? 'en' : 'zh';
 const I18 = LANG === 'en' ? I18N.en : null;
-const HAN = /[\u3400-\u9fff]/;
+const HAN = /[㐀-鿿]/;
 const i18nMiss = new Set();
 function trText(str) {
   if (!I18 || !str || !HAN.test(str)) return null;
@@ -4074,30 +4079,33 @@ function trText(str) {
   return m[1] + out + m[3];
 }
 const L = str => trText(str) ?? str; // 給 toast、confirm 這類不經過畫面的文字用
-UIKit.bind({ SET, t: L });   // ui.js 的音效、震動、下拉選單用這頁的設定和翻譯
 const TR_ATTRS = ['title', 'aria-label', 'placeholder'];
+// 學的語言的區塊：lang 不是 en／zh（lang="ja"、"it"…），或 class="ja"、data-noi18n、textarea
+const isStudy = el => { const l = el.getAttribute('lang'); return !!l && !/^(en|zh)/i.test(l); };
 function trNode(n) {
   if (n.nodeType === 3) { const v = trText(n.nodeValue); if (v != null && v !== n.nodeValue) n.nodeValue = v; return; }
   if (n.nodeType !== 1) return;
   const tag = n.tagName;
-  if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || n.getAttribute('lang') === 'ja' || n.classList.contains('ja') || n.hasAttribute('data-noi18n')) return;
+  if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || isStudy(n) || n.classList.contains('ja') || n.hasAttribute('data-noi18n')) return;
   for (const a of TR_ATTRS) { const v0 = n.getAttribute(a); if (v0) { const v = trText(v0); if (v != null && v !== v0) n.setAttribute(a, v); } }
   for (let c = n.firstChild; c; c = c.nextSibling) trNode(c);
 }
-const inJa = n => { const e = n.nodeType === 1 ? n : n.parentElement; return !!(e && e.closest('[lang="ja"],.ja,[data-noi18n],textarea')); };
+const inStudy = n => { let e = n && (n.nodeType === 1 ? n : n.parentElement); for (; e && e !== document.documentElement; e = e.parentElement) { if (e.tagName === 'TEXTAREA' || isStudy(e) || e.classList.contains('ja') || e.hasAttribute('data-noi18n')) return true; } return false; };
 if (I18) {
   document.documentElement.lang = 'en';
-  document.title = 'Japanese N5 · Vocablearn';
+  if (I18.title) document.title = I18.title;
   trNode(document.body);
   new MutationObserver(recs => {
     for (const r of recs) {
-      if (r.type === 'childList') { for (const n of r.addedNodes) if (!inJa(n.parentNode || n)) trNode(n); }
-      else if (r.type === 'characterData') { if (!inJa(r.target)) trNode(r.target); }
-      else if (r.type === 'attributes') { const el = r.target, v0 = el.getAttribute(r.attributeName); if (v0 && !inJa(el)) { const v = trText(v0); if (v != null && v !== v0) el.setAttribute(r.attributeName, v); } }
+      if (r.type === 'childList') { for (const n of r.addedNodes) if (!inStudy(n.parentNode || n)) trNode(n); }
+      else if (r.type === 'characterData') { if (!inStudy(r.target)) trNode(r.target); }
+      else if (r.type === 'attributes') { const el = r.target, v0 = el.getAttribute(r.attributeName); if (v0 && !inStudy(el)) { const v = trText(v0); if (v != null && v !== v0) el.setAttribute(r.attributeName, v); } }
     }
   }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: TR_ATTRS });
   window.__i18nMiss = i18nMiss;
 }
+// @end shared/i18n.js
+UIKit.bind({ SET, t: L });   // ui.js 的音效、震動、下拉選單用這頁的設定和翻譯
 function putRec(id, rec) { S.items[id] = rec; saveLocal(); Cloud.schedule(); }
 function touch(id, patch) {
   const old = getRec(id), now = Date.now();

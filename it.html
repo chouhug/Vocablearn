@@ -3269,6 +3269,543 @@ IT.GX_PATH = [
 })(typeof window !== 'undefined' ? window : globalThis);
 
 ;
+// ===== 介面英文對照（設定 → 介面語言 選 English 時使用；日文頁和語言頁共用：n5src/i18n-ui.js）=====
+// 語言頁另外加 lang-i18n.js（語言頁才有的介面文字）和各語言的 i18n.js（文法說明、例句翻譯這些內容）
+// 程式裡的介面文字都用中文寫；畫面上出現的中文會照這裡換成英文（日文區塊不會動）。
+// dict：整段中文 → 英文。re：含數字或可變內容的句子，用正規表示式比對。
+// 例句翻譯（I18N_SENT）和五十音例字（kanaEx）在檔案最後，由 build 前整理好的清單產生。
+const I18N = { en: { dict: {}, re: [], kanaEx: {}, content: {}, title: '' } };
+(() => {
+const D = {
+// ---- 上方、分頁 ----
+'日語': 'Japanese', '日文': 'Japanese', '今日 0/20 題': 'Today 0/20', '分頁': 'Tabs',
+'五十音': 'Kana', '單選': 'Choice', '字卡': 'Cards', '填空': 'Fill-in', '文法': 'Grammar', '單字庫': 'Words',
+'漢字上的假名：開': 'Furigana: on', '漢字上的假名：開（點一下隱藏）': 'Furigana: on (tap to hide)', '漢字上的假名：關（點一下顯示）': 'Furigana: off (tap to show)',
+'顯示羅馬拼音': 'Show romaji', '外觀': 'Appearance', '外觀：淺色': 'Appearance: light', '外觀：深色': 'Appearance: dark',
+'外觀：淺色（點一下切換）': 'Appearance: light (tap to switch)', '外觀：深色（點一下切換）': 'Appearance: dark (tap to switch)',
+'顯示漢字的假名': 'Showing furigana', '已隱藏假名，點單字可以看讀音': 'Furigana hidden — tap a word to see its reading',
+'單字意思': 'Word meaning', '選擇': 'Choose', '關閉': 'Close', '收起': 'Collapse',
+// ---- 通用 ----
+'答對了': 'Correct', '答錯了': 'Wrong', '答錯了（看了答案）': 'Wrong (answer shown)', '（看了答案）': ' (answer shown)', '答對': 'Correct', '答錯': 'Wrong',
+'下一題（Enter）': 'Next (Enter)', '下一題': 'Next', '送出': 'Submit', '看答案': 'Show answer', '正確答案：': 'Answer: ',
+'這一輪完成了': 'Round complete', '再來一輪': 'Another round', '播放例句': 'Play sentence', '播放單字': 'Play word', '播放發音': 'Play sound',
+'發音': 'Sound', '例字': 'Example', '例句': 'Example', '單字': 'Word', '題型': 'Question type', '題目來源': 'Source', '範圍': 'Range',
+'詞性': 'Part of speech', '全部': 'All', '名詞': 'Noun', '動詞': 'Verb', 'い形容詞': 'i-adjective', 'な形容詞': 'na-adjective', '副詞': 'Adverb',
+'指示詞・連接詞': 'Demonstratives & conjunctions', '指示連接': 'Demonst./conj.', '數字與時間': 'Numbers & time', '數字時間': 'Numbers & time',
+'招呼語與常用句': 'Greetings & phrases', '招呼語': 'Greetings', '助詞・語尾': 'Particle / ending', '助詞': 'Particles',
+'動詞(一類)': 'Verb (group 1)', '動詞(二類)': 'Verb (group 2)', '動詞(三類)': 'Verb (group 3)',
+'未學': 'New', '待考': 'To test', '已學會': 'Learned', '已排除': 'Excluded', '已列入考題': 'Added to quiz', '練習中': 'Practicing', '還沒學': 'Not learned',
+'最近學過': 'Recently learned', '最近學過的範圍': 'Recently learned range', '最近 1 天': 'Last 1 day', '最近 3 天': 'Last 3 days', '最近 7 天': 'Last 7 days',
+'最近 10 個字': 'Last 10 words', '最近 20 個字': 'Last 20 words', '最近 30 個字': 'Last 30 words', '最近 50 個字': 'Last 50 words',
+'錯題': 'Mistakes', '錯題複習': 'Mistake review', '錯題複習中': 'Reviewing mistakes', '到期複習': 'Due review', '單選錯題': 'Choice mistakes', '填空錯題': 'Fill-in mistakes',
+'單選錯題複習': 'Choice mistake review', '填空錯題複習': 'Fill-in mistake review', '單選複習': 'Choice review', '填空複習': 'Fill-in review', '複習已學會': 'Review learned',
+'新字': 'New words', '單選最近學過': 'Choice: recently learned', '填空最近學過': 'Fill-in: recently learned', '複習單選': 'Review with choice', '複習字卡': 'Review with cards',
+'今天到期': 'Due today', '開': 'On', '關': 'Off', '小聲': 'Quiet',
+// ---- 空狀態 ----
+'目前沒有錯題。': 'No mistakes right now.', '目前沒有錯題複習。': 'No mistakes to review.', '今天沒有到期的假名。': 'No kana due today.', '這個範圍沒有題目。': 'No questions in this range.',
+'練習全部假名': 'Practice all kana', '這個來源裡沒有漢字詞。可以換一個題目來源，或先到字卡把有漢字的字列入考題。': 'No kanji words in this source. Pick another source, or add words with kanji to your quiz from Cards.',
+'還沒有待考的字。先到「字卡」把想練的字「列入考題」。': 'No words to test yet. Go to Cards and tap “Add to quiz” on the words you want to practice.',
+'去字卡挑字': 'Pick words in Cards', '目前沒有單選錯題。': 'No choice mistakes right now.', '練習待考的字': 'Practice words to test', '目前沒有單選錯題複習。': 'No choice mistakes to review.',
+'還沒有已學會的字。填空答對就算學會。': 'No learned words yet. A word counts as learned when you get it right in Fill-in.', '去填空': 'Go to Fill-in',
+'目前沒有填空錯題。': 'No fill-in mistakes right now.', '目前沒有填空錯題複習。': 'No fill-in mistakes to review.', '今天沒有到期要複習的字。': 'Nothing due for review today.',
+'目前沒有聽寫錯題。': 'No dictation mistakes right now.', '這個分類沒有題目。': 'No questions in this category.', '回到待考': 'Back to words to test',
+// ---- 五十音 ----
+'假名': 'Kana', '檢視': 'View', '平假名': 'Hiragana', '片假名': 'Katakana', '五十音表': 'Chart', '練習': 'Practice', '表格分類': 'Chart sections',
+'清音': 'Basic', '濁音': 'Voiced', '半濁音': 'Semi-voiced', '拗音': 'Combined', '濁音・半濁音': 'Voiced & semi-voiced',
+'開始練習': 'Start practice', '開始練習平假名': 'Practice hiragana', '開始練習片假名': 'Practice katakana', '容易混淆：': 'Easy to confuse: ',
+'促音「っ」與長音的說明': 'About the small っ and long vowels', '促音「っ／ッ」': 'Small tsu (っ／ッ)',
+'寫成小的「っ」，不發音，但要': 'Written as a small っ. It has no sound of its own, but you', '停頓一拍': 'pause for one beat',
+'，下一個子音像是重複一次。羅馬拼音寫成重複的子音。': ', as if the next consonant were doubled. In romaji it is written as a double consonant.',
+'長音': 'Long vowels', '母音拉長一拍。平假名用加上母音的方式寫（あ段＋あ、い段＋い、う段＋う、え段＋い或え、お段＋う或お）；片假名用「ー」。長短不同，意思就不同。': 'The vowel is held for an extra beat. Hiragana adds a vowel (a-row + あ, i-row + い, u-row + う, e-row + い or え, o-row + う or お); katakana uses ー. Long and short vowels change the meaning.',
+'看假名選拼音': 'Kana → romaji', '看拼音選假名': 'Romaji → kana', '聽發音選假名': 'Listen → kana', '假名→拼音': 'Kana → romaji', '拼音→假名': 'Romaji → kana', '聽→假名': 'Listen → kana',
+'按下按鈕聽發音，再選出假名': 'Tap the button to hear it, then pick the kana', '（日語固有詞幾乎不用）': '(almost never used in native words)',
+'（片假名的ヲ幾乎不用）': '(katakana ヲ is almost never used)', '（片假名的ヅ幾乎不用）': '(katakana ヅ is almost never used)', '（外來語很少用到）': '(rare even in loanwords)',
+// ---- 單選 ----
+'看日文選中文': 'Japanese → meaning', '詞性變化': 'Conjugation', '動詞＋形容詞': 'Verbs + adjectives', '一類動詞': 'Group 1 verbs', '二類動詞': 'Group 2 verbs', '三類動詞': 'Group 3 verbs', '長得像二類的一類': 'Group 1 that look like group 2', '形容詞': 'Adjectives',
+'ます形（禮貌）': 'ます form (polite)', '否定（ません／禮貌）': 'Negative (ません, polite)', '過去（禮貌）': 'Past (polite)', '過去否定（禮貌）': 'Past negative (polite)', 'ない形（普通體否定）': 'ない form (plain negative)', 'た形（普通體過去）': 'た form (plain past)', '〜たい（想要）': '〜たい (want to)', '副詞（…地）': 'Adverb (…ly)', '看中文選日文': 'Meaning → Japanese', '聽發音選中文': 'Listen → meaning',
+'日→中': 'JP → meaning', '中→日': 'Meaning → JP', '聽→中': 'Listen → meaning', '漢字讀音': 'Kanji reading', '助詞填空': 'Particles',
+'按下按鈕聽發音，再選出意思': 'Tap the button to hear it, then pick the meaning', '選出正確的讀音': 'Pick the correct reading',
+// ---- 字卡 ----
+'字卡來源': 'Card source', '這個分類的新字都看過了。': 'You have seen all new words in this category.', '還沒有待考的字。': 'No words to test yet.',
+'這個分類目前沒有字。': 'No words in this category yet.', '這一疊看完了': 'Stack finished', '再拿一疊': 'Next stack', '看新字': 'See new words',
+'已經會了': 'I know this', '列入考題': 'Add to quiz', '下一張': 'Next card', '變化形・詞性': 'Forms & part of speech', '看它的變化形': 'See its forms',
+// ---- 填空・聽寫 ----
+'填空模式': 'Fill-in mode', '句子填空': 'Sentence', '聽寫': 'Dictation', '聽寫錯題': 'Dictation mistakes',
+'漢字、平假名或拼音': 'Kanji, hiragana or romaji', '填入答案': 'Type your answer', '提示：第一個假名是': 'Hint: the first kana is', '提示': 'Hint', '收起提示': 'Hide hint',
+'填空的提示（第一個假名、假名數）': 'Fill-in hint (first kana, length)', '按「提示」才顯示': 'Only when I tap Hint', '一開始就顯示': 'Show right away',
+'填空提示：一開始就顯示': 'Fill-in hint: shown right away', '填空提示：按了才顯示': 'Fill-in hint: tap to show',
+'寫下聽到的字': 'Write what you hear', '平假名、拼音或漢字': 'Hiragana, romaji or kanji', '慢速': 'Slow', '再聽一次': 'Listen again', '看意思': 'Show meaning',
+// ---- 單字庫 ----
+'搜尋單字': 'Search words', '搜尋：日文、假名、拼音或中文': 'Search: Japanese, kana, romaji or English',
+'目前沒有要複習的題目。練習時答錯的字、到期的字會出現在這裡。': 'Nothing to review right now. Words you miss and words that come due will show up here.',
+'清單（待考、已學會、錯題）': 'Lists (to test, learned, mistakes)', '目前是空的': 'Empty for now', '找不到符合的字。': 'No matching words.',
+'移除': 'Remove', '移回未學': 'Move back to new', '恢復': 'Restore', '級': 'level',
+// ---- 設定 ----
+'設定': 'Settings', '音效': 'Sound effects', '按鈕和答題音效': 'Button & answer sounds',
+'答對、答錯、按按鈕時的短音效。手機開靜音模式時通常不會出聲。': 'Short sounds for right/wrong answers and button taps. Phones in silent mode usually stay quiet.',
+'答題震動': 'Vibration', '答對短震一下，答錯震兩下。': 'One short buzz when right, two when wrong.',
+'這個瀏覽器不支援震動（iPhone 的網頁 App 目前都不支援）。': 'This browser can’t vibrate (iPhone web apps don’t support it yet).',
+'現在是在別的頁面裡預覽，手機通常不會震；用 Chrome 或主畫面上的 App 開才會震。': 'This is a preview inside another page, so phones usually won’t vibrate. Open it in Chrome or from the home-screen app.',
+'測試震動': 'Test vibration', '試聽（同一類按鈕用同一個聲音）': 'Preview (buttons of the same kind share a sound)', '試聽': 'Preview',
+'青軸：列入考題、下一題': 'Click: add to quiz, next', '輕聲嘎：次要按鈕': 'Soft clack: secondary buttons', '木魚：底部分頁': 'Wood block: bottom tabs',
+'開關：上方按鈕': 'Toggle: top buttons', '滑動開關': 'Slide switch', '滴：篩選標籤': 'Tick: filter chips', '木琴：五十音': 'Xylophone: kana',
+'翻頁：文法、清單': 'Page flip: grammar, lists', '啾：點單字': 'Chirp: tap a word', '啵：打開選單': 'Pop: open a menu', '一輪完成': 'Round complete',
+'練習': 'Practice', '每輪題數': 'Questions per round', '「最近學過」的範圍': '“Recently learned” range',
+'每天到期複習最多幾個字': 'Daily limit for due reviews', '不限': 'No limit',
+'到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。': 'When many words are due, the most overdue come first; whatever you don’t finish today carries over. A wrong answer drops a word two levels instead of starting over.',
+'每輪題數會套用到五十音、單選、字卡和填空。「最近學過」一輪會出完範圍內的全部字；錯題複習每輪 10 題，從以前錯過的字輪流抽，抽過的要等其他字都出過才會再出現。': 'Round size applies to Kana, Choice, Cards and Fill-in. A “Recently learned” round covers every word in the range; mistake review always uses 10 random questions.',
+'介面語言 Language': 'Language 介面語言', '介面語言': 'Interface language',
+'切換後會重新載入。日文內容不變；選 English 時，單字意思和例句翻譯也會換成英文。': 'The app reloads after switching. Japanese stays the same; in English, word meanings and sentence translations switch to English too.',
+'重看使用導覽': 'Replay the tour', '顯示哪種語言的意思': 'Show meanings in',
+'字卡、單選、單字庫和點字看意思都會跟著換。例句翻譯跟著介面語言。': 'Applies to cards, choice questions, the word list and word pop-ups. Sentence translations follow the interface language.',
+'文法補充': 'Grammar notes', '已經會的文法等級（不再顯示）': 'Grammar levels you already know (hidden)', '全部顯示': 'Show all',
+'選了之後，字卡「文法」裡那些等級的文法就不再顯示。': 'Grammar at these levels will no longer appear under “Grammar” on cards.',
+'同步與備份': 'Sync & backup', '匯出進度': 'Export progress', '匯入進度': 'Import progress', '每輪：全部': 'Per round: all',
+'單字意思：中文': 'Word meaning: Chinese', '單字意思：English': 'Word meaning: English', '單字意思：中文＋English': 'Word meaning: Chinese + English',
+'中文': 'Chinese', '中文＋English': 'Chinese + English', '文法全部顯示': 'Showing all grammar',
+'複製': 'Copy', '已選取，請按複製': 'Selected — please copy', '已複製': 'Copied', '合併匯入': 'Merge import', '逐題取較新的紀錄，不會整份覆蓋。': 'Keeps the newer record for each item instead of overwriting everything.',
+'貼上備份碼（N5 開頭）': 'Paste a backup code (starts with N5)', '貼上備份碼': 'Paste backup code', '備份碼': 'Backup code',
+'無法讀取：請貼上完整的備份碼（以 N5 開頭）。': 'Couldn’t read it: paste the full backup code (starting with N5).',
+// 語音
+'這個瀏覽器不支援語音播放': 'This browser can’t play speech', '無法播放聲音': 'Couldn’t play sound',
+'這個瀏覽器不支援語音播放。建議改用 Safari、Chrome 或 Edge。': 'This browser can’t play speech. Try Safari, Chrome or Edge.',
+'日文語音（這台裝置）': 'Japanese voice (this device)', '還沒有讀到日文語音，系統會用預設聲音。': 'No Japanese voice found yet; the system default will be used.',
+'速度': 'Speed', '設定只存在這台裝置。': 'This setting is saved on this device only.', '這台裝置的日文語音聽起來比較機械。': 'The Japanese voices on this device sound robotic.',
+'iPhone／Mac：到「設定 → 輔助使用 → 朗讀內容 → 聲音 → 日文」下載「增強」或「高品質」的語音。': 'iPhone/Mac: go to Settings → Accessibility → Spoken Content → Voices → Japanese and download an “Enhanced” or “Premium” voice.',
+'Windows：建議改用 Edge 瀏覽器，會有較自然的線上語音。': 'Windows: use the Edge browser for more natural online voices.',
+// 震動
+'這個瀏覽器不支援震動（iPhone 的網頁都不支援）': 'This browser can’t vibrate (no iPhone web page can)',
+'在 Claude 的預覽裡不能震動，請用 Chrome 或主畫面上的 App 開': 'Vibration doesn’t work in the Claude preview; open it in Chrome or from the home-screen app',
+'瀏覽器擋下了震動，請檢查勿擾模式或震動設定': 'The browser blocked vibration; check Do Not Disturb or your vibration settings',
+'已送出震動；如果沒感覺，請改用主畫面上的 App 開': 'Vibration sent; if you felt nothing, open the home-screen app instead',
+'已送出震動；如果沒感覺，請關掉勿擾模式，並確認系統的震動有開': 'Vibration sent; if you felt nothing, turn off Do Not Disturb and check that system vibration is on',
+// 同步
+'進度只存在這台裝置': 'Progress is saved on this device only', '還沒登入。登入 Google 後，進度會存到雲端，換手機也能接著練。': 'Not signed in. Sign in with Google to save progress to the cloud and pick up on any phone.',
+'正在連線帳號…': 'Connecting to your account…', '已同步到你的帳號': 'Synced to your account', '已同步到 Google 帳號': 'Synced to your Google account', '正在同步…': 'Syncing…',
+'暫時無法同步，進度仍存在這台裝置': 'Can’t sync right now; progress is still saved on this device', '這個連結無法寫入你的帳號，進度只存在這台裝置': 'This link can’t write to your account; progress is saved on this device only',
+'已登入': 'Signed in', '已連帳號': 'Account linked', '未登入': 'Not signed in', '只存本機': 'This device only', '已登出，進度仍保留在這台裝置': 'Signed out; progress stays on this device',
+'登入失敗：Firebase 還沒允許這個網址，請到 Authentication → Settings → Authorized domains 加入 chouhug.github.io': 'Sign-in failed: Firebase doesn’t allow this address yet. Add the domain under Authentication → Settings → Authorized domains.',
+'登入失敗：請確認網路連線': 'Sign-in failed: check your connection', '登入失敗：Firebase 還沒打開 Google 登入': 'Sign-in failed: Google sign-in isn’t enabled in Firebase', '登入失敗，請再試一次': 'Sign-in failed, please try again',
+'用 Google 帳號存進度': 'Save progress with Google', '登入後，換手機、換電腦都能接著練。': 'Sign in to continue on any phone or computer.', '登入': 'Sign in', '登出': 'Sign out', '用 Google 登入': 'Sign in with Google',
+// ---- 點字看意思、變化形 ----
+'單字意思': 'Word meaning', '這句是固定的招呼語，整句記起來就好，不用拆文法。': 'This is a set phrase — just memorize it whole, no need to break down the grammar.',
+'以下）。可以到「單字庫 → 文法補充」調整。': 'and below). You can change this under Words → Grammar notes.',
+'這句的文法都在你已經會的等級（': 'All the grammar in this sentence is at levels you already know (',
+'句中：': 'In the sentence: ', '看更多例句 ›': 'More examples ›', '另有': 'Plus', '個已經會的文法沒有顯示。': 'grammar points you already know are hidden.',
+'這句例句用到的文法': 'Grammar used in this sentence', '返回上一個字': 'Back to previous word', '這類詞不會變化，直接記住就好。': 'Words like this don’t change form — just memorize them.',
+'主要變化（點一行看例句）': 'Main forms (tap a row for examples)', '句型範例': 'Pattern examples', '還沒有這個形的例句。': 'No examples for this form yet.',
+'句中的「': 'In this sentence “', '詞性變化規則': 'Conjugation rules', '變化規則': 'Conjugation rules',
+// ---- 文法分頁 ----
+'搜尋文法': 'Search grammar', '搜尋文法：は、て形、想要…': 'Search grammar: は, て-form, want to…', '‹ 文法列表': '‹ Grammar list',
+'點一下看完整的變化表。': 'Tap to see the full conjugation table.', '句尾與「です」': 'Sentence endings & です', '動詞的變化與句型': 'Verb forms & patterns',
+'形容詞': 'Adjectives', '其他句型': 'Other patterns', '其他': 'Other', '找不到符合的文法。': 'No matching grammar.', '出自單字：': 'From the word: ',
+'目前的單字例句裡還沒有用到這個文法。': 'None of the current example sentences use this grammar yet.',
+'一類動詞': 'Group 1 verbs', '五段動詞': 'godan verbs', '二類動詞': 'Group 2 verbs', '一段動詞': 'ichidan verbs', '三類動詞': 'Group 3 verbs', '不規則動詞': 'irregular verbs',
+'字尾是う段音（う、く、ぐ、す、つ、ぬ、ぶ、む、る）。變化時，最後一個字在あ、い、う、え、お段之間移動。': 'Ends in a u-row sound (う, く, ぐ, す, つ, ぬ, ぶ, む, る). When conjugating, the last kana moves between the a, i, u, e and o rows.',
+'ます形': 'ます-form', '字尾換成い段＋ます（む→み）': 'Change the ending to the i-row + ます (む → み)', '否定': 'Negative', '字尾換成い段＋ません': 'Change the ending to the i-row + ません',
+'過去': 'Past', '字尾換成い段＋ました': 'Change the ending to the i-row + ました', '過去否定': 'Past negative', '字尾換成い段＋ませんでした': 'Change the ending to the i-row + ませんでした',
+'て形': 'て-form', '看字尾決定（見下面的表）': 'Depends on the ending (see the table below)', 'て形＋ください': 'て-form + ください', 'て形＋います': 'て-form + います',
+'ない形': 'ない-form', '字尾換成あ段＋ない；「う」結尾的換成「わ」（買う→買わない）': 'Change the ending to the a-row + ない; a final う becomes わ (買う → 買わない)',
+'た形': 'た-form', '把て形的「て／で」換成「た／だ」': 'Swap the て／で of the て-form for た／だ', '字尾換成い段＋たい': 'Change the ending to the i-row + たい',
+'字尾是「る」，前面通常是い段或え段的音。變化最簡單：去掉「る」，直接接後面的部分。': 'Ends in る, usually after an i-row or e-row sound. The easiest group: drop る and add the ending.',
+'去掉る＋ます': 'Drop る + ます', '去掉る＋ません': 'Drop る + ません', '去掉る＋ました': 'Drop る + ました', '去掉る＋ませんでした': 'Drop る + ませんでした', '去掉る＋て': 'Drop る + て',
+'去掉る＋てください': 'Drop る + てください', '去掉る＋ています': 'Drop る + ています', '去掉る＋ない': 'Drop る + ない', '去掉る＋た': 'Drop る + た', '去掉る＋たい': 'Drop る + たい',
+'只有「する」（做）和「来る」（來），加上「名詞＋する」（勉強する、散歩する）。沒有規則可套，要直接背。「来る」的漢字讀音會變：きます、きて、こない。': 'Only する (do) and 来る (come), plus “noun + する” verbs (勉強する, 散歩する). There is no rule — memorize them. The reading of 来 changes: きます, きて, こない.',
+'する→します；来る→来ます（きます）': 'する → します; 来る → 来ます (きます)', 'しません；来ません（きません）': 'しません; 来ません (きません)', 'しました；来ました（きました）': 'しました; 来ました (きました)',
+'しませんでした；来ませんでした（きませんでした）': 'しませんでした; 来ませんでした (きませんでした)', 'して；来て（きて）': 'して; 来て (きて)', 'してください；来てください（きてください）': 'してください; 来てください (きてください)',
+'しています；来ています（きています）': 'しています; 来ています (きています)', 'しない；来ない（こない）': 'しない; 来ない (こない)', 'した；来た（きた）': 'した; 来た (きた)', 'したい；来たい（きたい）': 'したい; 来たい (きたい)',
+'以「い」結尾，可以直接放在名詞前面（大きい犬）。變化都發生在最後的「い」。「いい」變化時要換成「よ」。': 'Ends in い and can go straight before a noun (大きい犬). All changes happen to the final い. いい changes to よ when conjugated.',
+'原形＋です': 'Base form + です', 'い→くない＋です（也可以說「くありません」）': 'い → くない + です (くありません also works)', 'い→くて（又…又…）': 'い → くて (… and …)', 'い→く（接動詞，或接「なる」表示變得…）': 'い → く (before a verb, or before なる for “become …”)',
+'本身不變化，變化都在後面的「です」，跟名詞一樣。放在名詞前面要加「な」，當副詞用要加「に」。': 'Doesn’t change itself; the changes are in the です after it, just like nouns. Add な before a noun and に to use it as an adverb.',
+'＋じゃありません（正式：ではありません）': '+ じゃありません (formal: ではありません)', '＋な＋名詞': '+ な + noun', '修飾名詞時加「な」：静かな町': 'Add な before a noun: 静かな町', '當副詞時加「に」：静かに話す': 'Add に to make an adverb: 静かに話す',
+'名詞本身不變化，變化都在後面的「です」。': 'Nouns don’t change; the changes are in the です after them.', '＋です（是…）': '+ です (is …)',
+'例外：行く': 'Exception: 行く', 'て形・た形：看字尾': 'て-form & た-form: look at the ending', '長得像二類的一類動詞': 'Group 1 verbs that look like group 2',
+'這些字是い段或え段＋る 結尾，看起來像二類，其實是一類，要特別記：': 'These end in an i-row or e-row sound + る, so they look like group 2, but they are group 1 — memorize them:',
+'特別注意': 'Watch out', '「いい」（好）變化時要換成「よい」：よかった、よくない、よくて。「きれい」「嫌い」雖然是い結尾，其實是な形容詞（きれいな花、嫌いな食べ物）。': 'いい (good) becomes よい when conjugated: よかった, よくない, よくて. きれい and 嫌い end in い but are na-adjectives (きれいな花, 嫌いな食べ物).',
+'文法列表': 'Grammar list',
+// ---- 導覽 ----
+'上一步': 'Back', '下一步': 'Next', '略過': 'Skip', '開始學習': 'Start learning',
+'歡迎使用日語 N5': 'Welcome to Japanese N5', '從五十音開始，一路學到 N5 的單字和文法。先選介面語言，接下來用 30 秒認識每個分頁。': 'Start with kana and work up to N5 vocabulary and grammar. Pick a language first, then take 30 seconds to meet each tab.',
+'平假名、片假名的表，點一個字可以聽發音、看例字；切到「練習」做認字測驗。': 'Hiragana and katakana charts. Tap a kana to hear it and see an example word; switch to “Practice” to quiz yourself.',
+'字卡：挑要學的字': 'Cards: pick words to learn', '新字一張一張看：已經會的按「已經會了」，想練的按「列入考題」，之後單選和填空就會出這些字。': 'Go through new words one by one: tap “I know this” for words you know and “Add to quiz” for ones to practice. Choice and Fill-in will then quiz you on them.',
+'日→中、中→日、聽發音、漢字讀音、助詞填空、詞性變化，左上角可以換題型和題目來源。': 'Japanese → meaning, meaning → Japanese, listening, kanji readings, particles and conjugation. Change the question type and source at the top left.',
+'填空・聽寫': 'Fill-in & dictation', '看例句打出空格裡的字，答對才算「已學會」，之後照時間排到期複習。切到「聽寫」可以練聽力。': 'Type the missing word in a sentence. Getting it right marks the word as learned, and it comes back for review on a schedule. Switch to “Dictation” to train your ear.',
+'每個文法點都有說明和例句，也有動詞、形容詞的變化規則。': 'Every grammar point has an explanation and examples, plus conjugation rules for verbs and adjectives.',
+'單字庫・設定': 'Words & settings', '看進度、搜尋單字、進入錯題和到期複習。下面的「設定」可以調音效、用 Google 登入同步進度、換介面語言。': 'See your progress, search words, and jump into mistakes and due reviews. “Settings” below has sounds, Google sign-in for syncing, and the language switch.',
+'切換語言': 'Switch language', '點左上角的語言名稱可以換到別的語言；也可以鎖定只學其中幾個語言，避免一次學太多。': 'Tap the language name at the top left to switch languages. You can also lock in just a few languages so you don’t take on too much at once.',
+'上方的小按鈕': 'The small buttons on top', '「漢」切換漢字上的假名，「Aa」顯示羅馬拼音，最右邊切換淺色／深色。': '“漢” toggles furigana, “Aa” shows romaji, and the last one switches light/dark.',
+'小提示': 'Tip', '例句裡的單字都可以點，會跳出意思和讀音。準備好就開始吧！': 'Tap any word in a sentence to see its meaning and reading. Ready? Let’s go!',
+// ---- gloss.js：點字看到的說明 ----
+'助詞：標出主題（這裡念 wa）': 'Particle: marks the topic (read “wa” here)', '助詞：標出主語、喜好或存在的對象；也可當「但是」': 'Particle: marks the subject, or what is liked or exists; also “but”',
+'助詞：標出動作的對象（念 o）': 'Particle: marks the object of an action (read “o”)', '助詞：在（時間點、存在的地方）、給（對象）、往': 'Particle: at (a time, where something is), to (a person), toward',
+'助詞：在（動作的地方）、用（工具、手段）、因為': 'Particle: at (where an action happens), with/by (tool, means), because of', '助詞：往（方向，念 e）': 'Particle: toward (direction, read “e”)',
+'助詞：和（一起）、…和…': 'Particle: with (together); … and …', '助詞：也': 'Particle: also', '助詞：的；也可把動作變成名詞': 'Particle: ’s / of; can also turn an action into a noun',
+'助詞：從（起點）；接在句子後是「因為」': 'Particle: from (starting point); after a clause it means “because”', '助詞：到（終點）': 'Particle: until / to (end point)',
+'助詞：…和…等（列舉一部分）': 'Particle: … and … (among others)', '助詞：比…': 'Particle: than …', '助詞：放句尾表示疑問「嗎」': 'Particle: at the end of a sentence makes a question',
+'句尾助詞：…呢（希望對方同意）': 'Sentence-ending particle: …, right? (seeking agreement)', '句尾助詞：…喔（告訴對方）': 'Sentence-ending particle: … you know (telling someone)',
+'な形容詞接名詞時的連接詞': 'Links a na-adjective to a noun', '敬語的前綴，讓詞語更禮貌': 'Polite prefix that makes a word more respectful', '敬語的前綴': 'Polite prefix',
+'接在人名後的敬稱：先生、小姐': 'Honorific after a name: Mr./Ms.', '是（禮貌的斷定）': 'is (polite)', '是（過去，禮貌）': 'was (polite)', '是…嗎': 'is it …?',
+'不是（禮貌）': 'is not (polite)', '不是（禮貌，較正式）': 'is not (polite, more formal)', '…吧（推測）': 'probably … (guess)', '是（普通體）': 'is (plain form)', '因為': 'because',
+'一邊…一邊…（接在動詞ます形後面）': 'while … (after a verb’s ます-stem)', '這個（後面接名詞）': 'this (followed by a noun)', '那個（靠近對方，後面接名詞）': 'that (near you, followed by a noun)',
+'那個（遠處，後面接名詞）': 'that (over there, followed by a noun)', '哪個（後面接名詞）': 'which (followed by a noun)', '什麼樣的': 'what kind of', '哪裡、哪邊（禮貌）': 'where, which way (polite)', '那樣、是的': 'like that; yes',
+'動詞的禮貌語尾': 'polite verb ending', '動詞的禮貌語尾（過去）': 'polite verb ending (past)', '動詞的禮貌語尾（否定）': 'polite verb ending (negative)', '動詞的禮貌語尾（過去否定）': 'polite verb ending (past negative)',
+'…吧（提議）': 'let’s … (suggestion)', '要不要…（邀請）': 'won’t you …? (invitation)', '想要（做某事）': 'want to (do)', '想要（做某事，禮貌）': 'want to (do), polite',
+'請…': 'please …', '請不要…': 'please don’t …', '正在…；…著的狀態': 'is …ing; ongoing state', '不（否定）': 'not (negative)', 'い形容詞的否定': 'negative of an i-adjective',
+'變成': 'become', '變成了': 'became', '做': 'do', '「する」的て形': 'て-form of する', '加（算數）': 'plus (math)', '減（算數）': 'minus (math)', '那麼': 'well then',
+'各、每': 'each', '大約': 'about', '…左右（時間）': 'around … (time)', '只有': 'only', '只（後面接否定）': 'only (with a negative)', '等等': 'and so on',
+'請給我…；接て形是「請…」': 'please give me …; after a て-form: please …', '因為是…': 'because it is …', '因為沒有…': 'because there is no …', '「する」（做）的變化形': 'a form of する (do)',
+'三個人': 'three people', '五個人': 'five people', '六個人': 'six people', '七個人': 'seven people', '八個人': 'eight people', '九個人': 'nine people', '十個人': 'ten people',
+'台灣人': 'Taiwanese (person)', '幾歲': 'how old', '十歲': 'ten years old', '四個人': 'four people', '二十個人': 'twenty people', '三十個人': 'thirty people',
+'身高、背': 'height; back', '高（い形容詞的一部分）': 'high (part of an i-adjective)', '溫柔的': 'kind', '便利商店': 'convenience store', '林（姓氏）': 'Lin (surname)', '田中（姓氏）': 'Tanaka (surname)',
+'櫻花': 'cherry blossom', '村子': 'village', '大象': 'elephant', '兔子': 'rabbit', '橘子': 'mandarin orange', '壽司': 'sushi', '拉麵': 'ramen', '香菸': 'cigarette', '剪刀': 'scissors', '按鈕': 'button',
+'考試、測驗': 'exam; test', '電腦': 'computer', '新幹線（高鐵）': 'Shinkansen (bullet train)', '麵包店': 'bakery', '花店': 'flower shop', '…店': '… shop', '二樓': 'second floor', '五樓': 'fifth floor',
+'三本（書）': 'three (books)', '三張': 'three (flat things)', '一瓶、一枝（細長的東西）': 'one (long, thin thing)', '一次': 'once', '八點': 'eight o’clock', '九點': 'nine o’clock', '十點': 'ten o’clock',
+'七點': 'seven o’clock', '六點': 'six o’clock', '五點': 'five o’clock', '四點': 'four o’clock', '十一點': 'eleven o’clock', '十二點': 'twelve o’clock', '一千日圓': '1,000 yen', '一百日圓': '100 yen',
+'下一個': 'next', '前面；之前': 'in front; before', '少（「少し」的一部分）': 'few (part of 少し)', '再…一點': 'a little more …', '各位、大家': 'everyone', '什麼': 'what',
+'（後接否定）什麼都不': '(with a negative) nothing', '之後': 'after', '等一下、之後': 'later', '謝謝（口語）': 'thanks (casual)', '（過去）很好吃': 'was delicious',
+'心、精神（「気をつける」的一部分）': 'mind, spirit (part of 気をつける)', '「つける」的て形（小心、注意）': 'て-form of つける (be careful)', '遲到（「遅れる」的て形）': 'be late (て-form of 遅れる)', '遲到': 'be late', '擅長': 'good at',
+'把前面的動作變成名詞＋が': 'turns the action before it into a noun + が', '「開ける」（打開）的變化形': 'a form of 開ける (open)', '「入る」（進入）的變化形': 'a form of 入る (enter)',
+'畫（「かく」的ます形）': 'draw (ます-form of かく)', '穿（鞋、襪、褲子；「はく」的ます形）': 'put on (shoes, socks, trousers; ます-form of はく)', '穿著（鞋、襪、褲子）': 'wearing (shoes, socks, trousers)',
+'二類': 'group 2', '原形（字典形）': 'base form (dictionary form)', 'ます形：禮貌的說法': 'ます-form: polite', 'ます形否定：不…': 'ます-form negative: not …', 'ます形過去：…了': 'ます-form past: did …',
+'ます形過去否定：沒有…': 'ます-form past negative: didn’t …', '想要…': 'want to …', 'ます形＋に：去做…（目的）': 'ます-stem + に: go to do … (purpose)', 'て形：連接下一個動作': 'て-form: links to the next action',
+'ています：正在…、…著': 'ています: is …ing / state', 'ていました：過去一直…': 'ていました: was …ing', 'ていません：還沒…': 'ていません: hasn’t … yet', 'てください：請…': 'てください: please …',
+'てもいいですか：可以…嗎': 'てもいいですか: may I …?', 'た形：…了（普通體）': 'た-form: did … (plain)', 'たり：…啦…啦（列舉幾個動作）': 'たり: things like … and … (listing actions)',
+'ない形：不…': 'ない-form: not …', 'ないで：不要…': 'ないで: without …', 'ないでください：請不要…': 'ないでください: please don’t …', 'なくて：因為沒有…': 'なくて: because not …',
+'連用形': 'continuative form', '未然形（接ない等）': 'irrealis form (before ない etc.)', 'て形的一部分': 'part of a て-form', '原形': 'Base form', '過去：（那時）很好': 'past: was good',
+'副詞形': 'adverb form', '否定：不好': 'negative: not good', '過去：（那時）很…': 'past: was …', '副詞形：…地；接なる是「變得…」': 'adverb form: …ly; with なる: “become …”',
+'否定：不…': 'negative: not …', 'て形：連接下一句': 'て-form: links to the next clause', '變得…了': 'became …', '＋な：修飾後面的名詞': '+ な: describes the noun after it', '＋に：副詞用法': '+ に: used as an adverb',
+'數字＋量詞': 'number + counter', '這句裡的變化形': 'the form used in this sentence', 'てから：…之後': 'てから: after …', '變得': 'become',
+// 文法點
+'「は」主題': 'は — topic', '放在主題後面，意思像「說到…的話」。助詞的「は」念 wa。': 'Comes after the topic, like “as for …”. The particle は is read “wa”.',
+'「が」主語': 'が — subject', '標出「誰／什麼」做這件事或存在；喜歡、討厭、擅長、懂、有的對象也用「が」。': 'Marks who or what does something or exists. The thing you like, dislike, are good at, understand or have also takes が.',
+'「を」動作的對象': 'を — object', '放在動作的對象後面，例如「パンを食べます」（吃麵包）。念 o。': 'Comes after the object of an action, e.g. パンを食べます (eat bread). Read “o”.',
+'「に」時間、地點、對象': 'に — time, place, target', '表示時間點（七時に）、人或物存在的地方（部屋に）、動作的對象（母に）或目的地。': 'Marks a point in time (七時に), where someone or something is (部屋に), the person an action is aimed at (母に), or a destination.',
+'「で」地點、手段': 'で — place, means', '表示動作發生的地方（公園で），或使用的工具、交通方式（バスで）。': 'Marks where an action happens (公園で), or the tool or transport used (バスで).',
+'「へ」方向': 'へ — direction', '表示移動的方向，常和「行きます、来ます、帰ります」一起用。念 e。': 'Marks the direction of movement, often with 行きます, 来ます, 帰ります. Read “e”.',
+'「と」和': 'と — and / with', '「AとB」是 A 和 B；「人と」是和某人一起。': 'AとB means A and B; person + と means together with someone.',
+'「も」也': 'も — also', '取代「は、が、を」，表示「也是這樣」。': 'Replaces は, が or を to mean “also”.',
+'「の」的': 'の — ’s / of', '連接兩個名詞，表示所屬或說明，例如「先生の傘」（老師的傘）。': 'Links two nouns to show possession or description, e.g. 先生の傘 (the teacher’s umbrella).',
+'「から」從、因為': 'から — from, because', '接在名詞後是「從…」（九時から）；接在句子後是「因為…」（雨ですから）。': 'After a noun it means “from …” (九時から); after a clause it means “because …” (雨ですから).',
+'「まで」到': 'まで — until / to', '表示終點，常和「から」配對：「AからBまで」＝從 A 到 B。': 'Marks an end point, often paired with から: AからBまで = from A to B.',
+'「や」列舉': 'や — listing', '「AやB」＝A 和 B 等等，只舉出其中幾個。': 'AやB = A, B and so on — naming just a few.',
+'「だけ」只有': 'だけ — only', '接在名詞或數量後面：只…。例如「一つだけ」＝只有一個。': 'After a noun or amount: only …. E.g. 一つだけ = just one.',
+'「ずつ」各…、每…': 'ずつ — each', '接在數量後面，表示平均分配或每次的量。例如「一人に二つずつ」＝每人各兩個。': 'After an amount, for sharing equally or how much at a time. E.g. 一人に二つずつ = two for each person.',
+'「ぐらい／くらい」大約': 'ぐらい／くらい — about', '接在數量、時間、距離後面表示大概的量。例如「十分ぐらい」＝大約十分鐘。': 'After an amount, time or distance to mean roughly. E.g. 十分ぐらい = about ten minutes.',
+'「など」等等': 'など — and so on', '列舉之後加「など」，表示還有其他的，常和「や」一起用：りんごやみかんなど＝蘋果、橘子等等。': 'Added after a list to show there are more; often used with や: りんごやみかんなど = apples, mandarins and so on.',
+'「より」比較': 'より — comparison', '「AよりBが…」＝B 比 A 更…。': 'AよりBが… = B is more … than A.',
+'句尾「か」疑問': 'Sentence-final か — question', '放在句尾就變成問句，語調上揚，不需要問號也可以。': 'At the end of a sentence it makes a question, with rising intonation; no question mark needed.',
+'句尾「ね」': 'Sentence-final ね', '…呢。說話者覺得對方也會同意時加上。': '…, right? Used when you expect the listener to agree.',
+'句尾「よ」': 'Sentence-final よ', '…喔。告訴對方他可能不知道的事。': '… you know. Tells the listener something they may not know.',
+'「です」禮貌的「是」': 'です — polite “is”', '放在名詞或形容詞後面，讓句子變禮貌。過去是「でした」。': 'After a noun or adjective to make the sentence polite. The past is でした.',
+'「じゃありません」不是': 'じゃありません — is not', '「です」的否定。比較正式的寫法是「ではありません」。': 'The negative of です. The more formal version is ではありません.',
+'「でしょう」推測': 'でしょう — probably', '…吧。對不確定的事表示推測，或確認對方是否同意。': 'Probably …. A guess about something uncertain, or checking that the listener agrees.',
+'「〜ます」禮貌形': '〜ます — polite form', '動詞的禮貌說法，用在現在的習慣或未來要做的事。': 'The polite form of a verb, for habits or things you will do.',
+'「〜ません」否定': '〜ません — negative', '「ます」的否定：不…。': 'The negative of ます: don’t ….',
+'「〜ました」過去': '〜ました — past', '「ます」的過去：…了。': 'The past of ます: did ….',
+'「〜ませんでした」過去否定': '〜ませんでした — past negative', '沒有…（過去）。': 'Didn’t … (past).',
+'「〜ましょう」提議': '〜ましょう — let’s', '…吧。邀對方一起做，或主動提議。': 'Let’s …. Inviting someone to do something together, or offering.',
+'「〜ませんか」邀請': '〜ませんか — invitation', '要不要…？比「ましょう」更客氣的邀約。': 'Won’t you …? A politer invitation than ましょう.',
+'「〜たい」想要做': '〜たい — want to', '動詞ます形去掉「ます」加「たい」：想做…。禮貌說法再加「です」。': 'Drop ます from the ます-form and add たい: want to …. Add です to be polite.',
+'「〜に行く」去做…': '〜に行く — go to do', '動詞ます形去掉「ます」加「に」，再接「行く、来る」：去（來）做某事。': 'Drop ます, add に, then 行く or 来る: go (come) to do something.',
+'「て形」連接': 'て-form — linking', '把兩個動作接在一起：先做 A，再做 B。也是很多句型的基礎。': 'Joins two actions: do A, then B. It is also the base of many patterns.',
+'「〜てください」請…': '〜てください — please', '動詞て形加「ください」，禮貌地請對方做某事。': 'て-form + ください: politely asking someone to do something.',
+'「〜ないでください」請不要…': '〜ないでください — please don’t', '動詞ない形加「でください」，禮貌地請對方不要做。': 'ない-form + でください: politely asking someone not to do something.',
+'「〜ています」正在…／狀態': '〜ています — ongoing / state', '動詞て形加「います」：正在做的事，或持續的狀態（住んでいます＝住在）。': 'て-form + います: something in progress, or an ongoing state (住んでいます = live in).',
+'「〜てもいいですか」可以…嗎': '〜てもいいですか — may I', '動詞て形加「もいいですか」，詢問許可。': 'て-form + もいいですか: asking for permission.',
+'「〜てから」…之後': '〜てから — after', '動詞て形加「から」：做完 A 之後再做 B，強調先後順序。例如「食べてから、歯を磨きます」＝吃完再刷牙。': 'て-form + から: do B after finishing A, stressing the order. E.g. 食べてから、歯を磨きます = brush teeth after eating.',
+'「〜ながら」一邊…一邊…': '〜ながら — while', '動詞ます形去掉「ます」加「ながら」：同時做兩件事，主要的動作放在後面。例如「音楽を聞きながら勉強します」。': 'Drop ます and add ながら: doing two things at once, with the main action last. E.g. 音楽を聞きながら勉強します.',
+'「〜たり〜たりする」列舉動作': '〜たり〜たりする — listing actions', '動詞た形加「り」，舉出幾個代表性的動作，最後用「する」收尾。例如「本を読んだり、映画を見たりします」。': 'た-form + り names a few typical actions, ending with する. E.g. 本を読んだり、映画を見たりします.',
+'「〜ない」否定（普通體）': '〜ない — negative (plain)', '「ません」的普通說法。': 'The plain version of ません.',
+'「〜た」過去（普通體）': '〜た — past (plain)', '「ました」的普通說法。': 'The plain version of ました.',
+'い形容詞過去「〜かった」': 'i-adjective past 〜かった', '去掉「い」加「かった」：（那時）很…。禮貌說法再加「です」。': 'Drop い and add かった: was …. Add です to be polite.',
+'い形容詞否定「〜くない」': 'i-adjective negative 〜くない', '去掉「い」加「くない」：不…。': 'Drop い and add くない: not ….',
+'い形容詞「〜く」': 'i-adjective 〜く', '去掉「い」加「く」變成副詞（大きく開ける＝張大），或接「なる」表示變化（寒くなる＝變冷）。': 'Drop い and add く to make an adverb (大きく開ける = open wide), or add なる for a change (寒くなる = get cold).',
+'「〜くなる」變得…': '〜くなる — become', 'い形容詞去掉「い」加「くなる」，表示狀態改變：寒くなりました＝變冷了。': 'Drop い from an i-adjective and add くなる for a change of state: 寒くなりました = it got cold.',
+'な形容詞＋「な」＋名詞': 'na-adjective + な + noun', 'な形容詞放在名詞前要加「な」：静かな所（安靜的地方）。': 'Put な between a na-adjective and a noun: 静かな所 (a quiet place).',
+'這個／那個（近對方）／那個（遠處），後面一定接名詞。': 'This / that (near you) / that (over there) — always followed by a noun.',
+'「あります／います」存在': 'あります／います — existence', '東西、植物用「あります」；人、動物用「います」。常見句型：「地點に＋東西が＋あります」。': 'Things and plants use あります; people and animals use います. Common pattern: place に + thing が + あります.',
+// 詞性說明
+'一類動詞（五段動詞）': 'Group 1 verbs (godan)', '字尾是う段音（う、く、ぐ、す、つ、ぬ、ぶ、む、る）。變化時，字尾在あ、い、う、え、お段之間移動：ます形把字尾換成い段（飲む → 飲みます），ない形換成あ段（飲む → 飲まない，う結尾的換成わ）。て形看字尾：う・つ・る → って，む・ぶ・ぬ → んで，く → いて，ぐ → いで，す → して。「行く」是例外，て形是「行って」。': 'Ends in a u-row sound (う, く, ぐ, す, つ, ぬ, ぶ, む, る). The ending moves between the a, i, u, e and o rows: the ます-form uses the i-row (飲む → 飲みます), the ない-form the a-row (飲む → 飲まない; a final う becomes わ). The て-form depends on the ending: う・つ・る → って, む・ぶ・ぬ → んで, く → いて, ぐ → いで, す → して. 行く is an exception: 行って.',
+'二類動詞（一段動詞）': 'Group 2 verbs (ichidan)', '字尾是「る」，前面通常是い段或え段的音（見る、食べる）。變化最簡單：去掉「る」，直接加ます、て、ない、た（食べる → 食べます、食べて、食べない、食べた）。': 'Ends in る, usually after an i-row or e-row sound (見る, 食べる). The easiest group: drop る and add ます, て, ない, た (食べる → 食べます, 食べて, 食べない, 食べた).',
+'三類動詞（不規則動詞）': 'Group 3 verbs (irregular)', '只有「する」（做）和「来る」（來）兩個，加上「名詞＋する」的動詞（勉強する、散歩する）。變化不規則，要直接背：する → します、して、しない；来る → 来ます（きます）、来て（きて）、来ない（こない）。': 'Just する (do) and 来る (come), plus “noun + する” verbs (勉強する, 散歩する). They are irregular, so memorize them: する → します, して, しない; 来る → 来ます (きます), 来て (きて), 来ない (こない).',
+'以「い」結尾的形容詞，可以直接放在名詞前面（大きい犬）。變化發生在最後的「い」：過去換成「かった」，否定換成「くない」，連接下一句換成「くて」。「いい」比較特別，變化時要用「よ」開頭（よかった、よくない）。': 'Adjectives ending in い; they go straight before a noun (大きい犬). Changes happen to the final い: past かった, negative くない, linking くて. いい is special and uses よ when conjugated (よかった, よくない).',
+'放在名詞前面要加「な」（静かな町）。本身不變化，變化都在後面的「です」：でした、じゃありません。變成副詞時加「に」（静かに）。': 'Add な before a noun (静かな町). They don’t change themselves; the changes are in the です after them: でした, じゃありません. Add に for an adverb (静かに).',
+'表示人、事、物、地方的詞，本身不變化。後面加「です」是「是…」；過去加「でした」，否定加「じゃありません」。': 'Words for people, things and places. They don’t change; add です for “is …”, でした for the past, じゃありません for the negative.',
+'用來形容動作或形容詞的程度、方式（とても、ゆっくり），本身不變化，通常放在動詞或形容詞前面。': 'Describe how or how much (とても, ゆっくり). They don’t change and usually come before a verb or adjective.',
+'「こそあど」系列的詞（この・その・あの・どの、こちら・そちら…）和連接句子的詞（そして、しかし、それから）。本身不變化：この、その這類後面一定要接名詞；連接詞放在句子開頭，用來接上一句。': 'The こそあど words (この・その・あの・どの, こちら・そちら…) and words that link sentences (そして, しかし, それから). They don’t change: この, その and so on are always followed by a noun; conjunctions start a sentence and link it to the previous one.',
+'數字、日期、時間的說法本身不變化。注意有些數字在不同場合念法不同，例如「四」可以念よん或し，「七」可以念なな或しち。': 'Numbers, dates and times don’t change. Some numbers have more than one reading: 四 can be よん or し, 七 can be なな or しち.',
+'固定的說法，不用拆開變化，整句記起來，在對的場合使用就好。': 'Set expressions — no need to break them down. Memorize them whole and use them in the right situation.',
+'助詞或句型，接在其他詞的後面，用來表示關係或語氣。': 'Particles and patterns that follow other words to show relationships or tone.',
+'字典上查到的樣子；接「の」「前に」等句型時要用原形': 'The form you find in a dictionary; used before patterns like の and 前に', '禮貌的說法': 'polite', '不…（禮貌）': 'not … (polite)', '…了（禮貌）': 'did … (polite)',
+'沒有…（禮貌）': 'didn’t … (polite)', '連接下一個動作；很多句型的基礎': 'links to the next action; the base of many patterns', '正在…、…著': 'is …ing; ongoing state', '不…（普通體）': 'not … (plain)', '…了（普通體）': 'did … (plain)',
+'不規則：沒有': 'irregular: there isn’t', '可以直接放在名詞前面': 'can go straight before a noun', '（那時）很…': 'was …', '不…': 'not …', '（那時）不…': 'wasn’t …', '連接下一句：又…又…': 'links clauses: … and …',
+'…地；接「なる」是變得…': '…ly; with なる: become …', '修飾名詞，例：': 'describes a noun, e.g. ', '變成副詞：…地': 'makes an adverb: …ly', '是…': 'is …', '（那時）是…': 'was …', '不是…': 'is not …',
+'注意：「行く」的て形是例外，是「行って」，不是「行いて」。': 'Note: the て-form of 行く is an exception: 行って, not 行いて.', '注意：「ある」的否定是「ない」，不是「あらない」。': 'Note: the negative of ある is ない, not あらない.',
+'注意：「いい」變化時要換成「よ」：よかった、よくない、よくて。': 'Note: いい changes to よ: よかった, よくない, よくて.', '注意：「': 'Note: “',
+'」雖然是 い段或え段＋る 結尾，看起來像二類，但其實是一類動詞，要特別記住。': '” ends in an i-row or e-row sound + る and looks like group 2, but it is actually a group 1 verb — remember it.',
+'〜です': '〜です', '過去否定': 'Past negative', '副詞': 'Adverb', '＋に': '+ に',
+// ---- 我的單字、查字典 ----
+'＋ 新增自己的單字': '+ Add your own word', '新增自己的單字': 'Add your own word', '編輯我的單字': 'Edit my word',
+'我的單字': 'My words', '清單（待考、已學會、錯題、我的單字）': 'Lists (to test, learned, mistakes, My words)',
+'讀音（假名）': 'Reading (kana)', '意思': 'Meaning', '更多：例句（可以不填）': 'More: example sentence (optional)', '例句': 'Example sentence', '例句的中文': 'Sentence translation',
+'例句的讀法（整句用平假名；填了例句的漢字才有振り仮名）': 'Sentence reading (the whole sentence in hiragana; adds furigana to its kanji)',
+'例句裡的寫法（通常不用填，App 會自己找；找錯了再填）': 'Form used in the sentence (usually not needed — the app finds it; fill in only if it picks the wrong one)',
+'儲存': 'Save', '刪除': 'Delete', '確定刪除？': 'Delete for sure?', '編輯': 'Edit', '已儲存': 'Saved', '已刪除': 'Deleted', '已加到我的單字，並列入考題': 'Added to My words and to your quiz',
+'存好就列入考題。打完單字會自動查字典（Wiktionary、MyMemory），填好的意思可以自己改。': 'Saved words go straight into your quiz. After you type a word, the app looks it up (Wiktionary, MyMemory); you can edit the meaning it fills in.',
+'請輸入單字。': 'Please enter a word.', '請輸入意思（也可以等字典查完自動填）。': 'Please enter a meaning (or wait for the dictionary to fill it in).',
+'連不上字典，意思請自己填。': 'Can’t reach the dictionary — enter the meaning yourself.', '再查一次': 'Try again',
+'中文（機器翻譯，可能不準）': 'Chinese (machine translation, may be inaccurate)', '英文解釋（Wiktionary）': 'English definitions (Wiktionary)',
+'讀音請全部用假名（平假名或片假名）。': 'Write the reading in kana only (hiragana or katakana).',
+'「例句的讀法」和例句對不起來。請把整句用平假名寫一次（片假名和標點照原樣），或先留空。': '“Sentence reading” doesn’t match the sentence. Write the whole sentence in hiragana (keep katakana and punctuation as they are), or leave it empty.',
+'專有名詞': 'Proper noun', '介係詞': 'Preposition', '代名詞': 'Pronoun', '連接詞': 'Conjunction', '感嘆詞': 'Interjection', '限定詞': 'Determiner', '冠詞': 'Article', '數詞': 'Numeral',
+'片語': 'Phrase', '慣用語': 'Idiom', '介係詞片語': 'Prepositional phrase', '諺語': 'Proverb',
+};
+const re = [];
+const t = s => I18N.en.dict[s] ?? s;
+const R = (r, f) => re.push([r, f]);
+// 我的單字、查字典
+R(/^單字或片語（(.+)）$/, (m, a) => `Word or phrase (${t(a)})`);
+R(/^單字庫裡本來就有「(.+)」，用上面的搜尋就找得到。$/, '“$1” is already in the word list — search for it above.');
+R(/^你已經新增過「(.+)」了。$/, 'You already added “$1”.');
+R(/^正在查「(.+)」…$/, 'Looking up “$1”…');
+R(/^字典裡查不到「(.+)」（可以檢查拼字，或改查原形）。意思請自己填。$/, 'No dictionary entry for “$1” (check the spelling, or try the base form). Enter the meaning yourself.');
+R(/^已自動填入(讀音和意思|意思|讀音)，不對可以直接改，或點下面其他的意思。$/, (m, a) => `Filled in the ${{ '讀音和意思': 'reading and meaning', '意思': 'meaning', '讀音': 'reading' }[a]} automatically — edit it if it’s wrong, or tap another meaning below.`);
+R(/^「(.+)」有漢字，請在「讀音」填它的假名。$/, '“$1” has kanji — enter its kana in “Reading”.');
+R(/^讀音「(.+)」和「(.+)」對不起來，請檢查假名的部分是不是一樣。$/, 'The reading “$1” doesn’t match “$2” — check that the kana parts are the same.');
+R(/^例句裡找不到「(.+)」。如果這個字在例句裡有變化（例如 食べる → 食べます），請在「例句裡的寫法」填上例句裡的樣子。$/, '“$1” isn’t in the sentence. If it changes form there (e.g. 食べる → 食べます), enter that form in “Form used in the sentence”.');
+R(/^「(.+)」在例句裡要是完整的一段（不能切在一個漢字詞的中間）。$/, '“$1” must be a whole part of the sentence (not cut in the middle of a kanji word).');
+R(/^「(.+)」有漢字，填空要知道它怎麼唸：請填「例句的讀法」。$/, '“$1” has kanji, so fill-in needs its reading — please fill in “Sentence reading”.');
+R(/^查字典並把「(.+)」加到我的單字$/, 'Look up “$1” and add it to My words');
+R(/^查字典並加到我的單字$/, 'Look it up and add to My words');
+R(/^目前是(.+)，點一下切換語言$/, (m, a) => `Current: ${t(a)} — tap to switch language`);
+R(/^今日 (\d+)\/(\d+) 題( ✓)?$/, 'Today $1/$2$3');
+R(/^今天的 (\d+) 題完成了！$/, 'Today’s $1 questions done!');
+R(/^剩 (\d+) · 共 (\d+)$/, '$1 left · $2 total');
+R(/^本輪還剩 (\d+) 題，此分類共 (\d+) 題$/, '$1 left in this round, $2 in this category');
+R(/^這疊還剩 (\d+) 張，此分類共 (\d+) 張$/, '$1 cards left in this stack, $2 in this category');
+R(/^(\d+) 題$/, '$1 questions');
+R(/^每輪 (\d+) 題$/, '$1 per round');
+R(/^([\d.]+) 倍$/, '$1×');
+R(/^，?共 (\d+) 個假名$/, (m, n) => (m.startsWith('，') ? ', ' : '') + n + ' kana');
+R(/^你的答案：([\s\S]*)$/, 'Your answer: $1');
+R(/^播放 (.+)$/, 'Play $1');
+R(/^看「(.+)」的詞性和變化形$/, 'Part of speech and forms of “$1”');
+R(/^目前只顯示「(.+)」，可以改選「全部」。$/, (m, a) => `Only showing “${t(a)}”. You can switch to “All”.`);
+R(/^「(.+)」範圍內還沒有學過的字。可以在上方把範圍調大，或先到字卡把字列入考題。$/, (m, a) => `No words learned in “${t(a)}”. Widen the range above, or add words to your quiz from Cards.`);
+R(/^已標記為學會，(\d+) 天後會再考一次$/, 'Marked as learned — it will come back in $1 days');
+R(/^到期複習：每天最多 (\d+) 個$/, 'Due reviews: up to $1 a day'); R(/^到期複習：不限$/, 'Due reviews: no limit'); R(/^(\d+) 個$/, '$1 words');
+R(/^已學會，明天（(.+)）會出現在到期複習。$/, 'Learned! It will be in due review tomorrow ($1).');
+R(/^下次複習：(.+)$/, 'Next review: $1');
+R(/^已學會 (\d+)\/(\d+)$/, 'Learned $1/$2');
+R(/^作答 (\d+) 次$/, 'answered $1 times');
+R(/^最近學過：(.+)$/, (m, a) => 'Recently learned: ' + t(a));
+R(/^(N5(?:～N\d)?) 已經會了$/, (m, a) => 'I know ' + a.replace('～', '–'));
+R(/^已隱藏 (N\d) 以下的文法$/, 'Hiding grammar at $1 and below');
+R(/^App 裡的(.+)（(\d+)）$/, (m, a, n) => `${t(a)} in the app (${n})`);
+R(/^變化規則（例：(.+)）$/, 'Conjugation rules (e.g. $1)');
+R(/^看「(.+)」的完整變化表$/, 'All forms of “$1”');
+R(/^例句（(\d+)）$/, 'Examples ($1)');
+R(/^再顯示 (\d+) 句（共 (\d+) 句）$/, 'Show $1 more ($2 total)');
+R(/^已匯入 (\d+) 筆紀錄$/, 'Imported $1 records');
+R(/^共 (\d+) 字。換裝置時貼到「匯入進度」。$/, '$1 characters. Paste it into “Import progress” on your other device.');
+R(/^已同步到 Google 帳號（(.+)）$/, 'Synced to your Google account ($1)');
+R(/^(.*)（較自然）$/, '$1 (more natural)');
+R(/^」：(.+)$/, (m, a) => '”: ' + t(a));
+R(/^用到「(.+)」的例句$/, 'Sentences using “$1”');
+R(/^句型範例：用其他(動詞|詞)示範「(.+)」的用法，換成「(.+)」也是一樣的道理$/, (m, k, a, b) => `Pattern examples: other ${k === '動詞' ? 'verbs' : 'words'} showing “${t(a)}”; it works the same way with “${b}”`);
+R(/^另有 (\d+) 個已經會的文法沒有顯示。$/, '$1 grammar points you already know are hidden.');
+R(/^(.+?) (\d+)$/, (m, a, n) => I18N.en.dict[a] != null ? `${I18N.en.dict[a]} ${n}` : m);
+R(/^(.+)行$/, (m, a) => /^[ぁ-ゖァ-ヺー]+$/.test(a) ? a + '-row' : m);
+R(/^.+ · .+$/, m => m.split(' · ').map(x => I18N.en.dict[x] ?? (/^(.+)行$/.test(x) ? x.replace(/行$/, '-row') : /^作答 (\d+) 次$/.test(x) ? x.replace(/^作答 (\d+) 次$/, 'answered $1 times') : x)).join(' · '));
+R(/^每輪：全部$/, 'Per round: all');
+Object.assign(I18N.en.dict, D);
+I18N.en.re = re;
+})();
+
+
+;
+// ===== 語言頁的英文對照（介面共用的部分在 i18n-ui.js；各語言的內容在 <代碼>/i18n.js）=====
+// LD：語言頁才有的介面文字（整段中文 → 英文）。LR：含變數的句子（正規表示式），放在共用規則前面先比對。
+// I18N.en.content：各語言的內容（文法說明 HTML、練習題、例句翻譯…），英文介面時在建立資料前整段換掉（applyContent）。
+(() => {
+const E = I18N.en;
+// 把語言包（LX）和設定（LANGCFG）裡的中文字串，照 content（整段）或 dict 換成英文。
+// 單字的中文意思（第 5 欄）不換：意思用「單字意思」設定決定。
+E.applyContent = (IT, LC) => {
+  const HAN = /[㐀-鿿]/, C = E.content, D = E.dict, seen = new Set();
+  const tr = s => C[s] ?? D[s] ?? (C[s.trim()] != null ? s.replace(s.trim(), C[s.trim()]) : s);
+  const walk = (o, depth) => {
+    if (!o || typeof o !== 'object' || seen.has(o) || depth > 12) return;
+    seen.add(o);
+    for (const k of Object.keys(o)) {
+      const v = o[k];
+      if (typeof v === 'string') { if (HAN.test(v)) o[k] = tr(v); }
+      else if (v && typeof v === 'object') walk(v, depth + 1);
+    }
+  };
+  // 單字表：只換例句的中文（第 8 欄）
+  for (const e of IT.W || []) if (typeof e[7] === 'string' && HAN.test(e[7])) e[7] = tr(e[7]);
+  seen.add(IT.W);
+  for (const k of Object.keys(IT)) { const v = IT[k]; if (k === 'W' || typeof v === 'function') continue; if (typeof v === 'string') { if (HAN.test(v)) IT[k] = tr(v); } else walk(v, 0); }
+  if (LC) for (const k of Object.keys(LC)) { const v = LC[k]; if (k === 'id' || k === 'name') continue; if (typeof v === 'string') { if (HAN.test(v)) LC[k] = tr(v); } else walk(v, 0); }
+  if (LC && E.langName && E.langName[LC.id]) E.title = `${E.langName[LC.id]} ${LC.level} · Vocablearn`;
+};
+E.langName = { ja: 'Japanese', it: 'Italian', es: 'Spanish', de: 'German', ru: 'Russian', en: 'English' };
+const LD = {
+// ---- 語言名稱、詞性、性別 ----
+'日語': 'Japanese', '義大利文': 'Italian', '西班牙文': 'Spanish', '德文': 'German', '俄文': 'Russian', '英文': 'English',
+'名詞': 'Noun', '形容詞': 'Adjective', '副詞': 'Adverb', '介係詞': 'Preposition', '冠詞': 'Article', '代名詞': 'Pronoun', '連接詞': 'Conjunction',
+'數字': 'Number', '限定詞': 'Determiner', '疑問詞': 'Question word', '常用語': 'Phrase', '不規則動詞': 'Irregular verb', '我的單字': 'My words',
+'動詞 -are': 'Verb -are', '動詞 -ere': 'Verb -ere', '動詞 -ire': 'Verb -ire', '動詞 -ire（-isc-）': 'Verb -ire (-isc-)',
+'動詞 -ar': 'Verb -ar', '動詞 -er': 'Verb -er', '動詞 -ir': 'Verb -ir',
+'動詞（規則）': 'Verb (regular)', '動詞（強變化）': 'Verb (strong)', '情態動詞': 'Modal verb', '片語動詞': 'Phrasal verb', '片語・搭配': 'Phrase / collocation',
+'動詞（第一變位）': 'Verb (1st conjugation)', '動詞（第二變位）': 'Verb (2nd conjugation)', '語氣詞': 'Particle', '無人稱述語': 'Impersonal predicate',
+'陽性': 'masculine', '陰性': 'feminine', '中性': 'neuter', '陽': 'm', '陰': 'f', '中': 'n',
+'名': 'G', '陽陰': 'mf', '陽陰中': 'mfn',
+'名詞・陽': 'Noun · m', '名詞・陰': 'Noun · f', '名詞・中': 'Noun · n', '名詞・複': 'Noun · pl',
+'單數': 'Singular', '複數': 'Plural', '複數：': 'Plural: ', '只用複數': 'plural only', '複數（只用複數）': 'Plural (plural only)', '一個': 'One (a/an)', '性別': 'Gender',
+'定冠詞': 'Definite article', '不定冠詞': 'Indefinite article', '陽單': 'm. sg.', '陰單': 'f. sg.', '陽複': 'm. pl.', '陰複': 'f. pl.',
+'時態': 'Tense', '動詞時態': 'Verb tense', '現在式': 'Present', '過去式': 'Past', '命令式': 'Imperative', '將來式': 'Future', '其他形：': 'Other forms: ',
+'放在名詞前面的形：': 'Form before a noun: ', '動詞變化': 'Verb forms', '陽→複數陰': 'm → f. in plural',
+'這個動詞通常不用完成式。': 'This verb isn’t usually used in the perfect.', '這個動詞沒有常用的命令式。': 'This verb has no common imperative.',
+// ---- 上方、分頁、發音 ----
+'名詞上的性別標示': 'Gender marks on nouns', '名詞上的性別：開': 'Noun gender: on', '名詞上的性別：關': 'Noun gender: off',
+'名詞上方標出性別': 'Showing gender above nouns', '已隱藏性別，點單字可以看詞性': 'Gender hidden — tap a word to see its part of speech',
+'發音': 'Sounds', '發音分頁': 'Sound sections', '字母': 'Letters', '規則': 'Rules', '練習': 'Practice', '練習方式': 'Practice type',
+'聽音選拼字': 'Listen → spelling', '看拼字選讀法': 'Spelling → sound', '聽發音，選出你聽到的拼法': 'Listen, then pick the spelling you heard',
+'字母名稱': 'Letter name', '例字': 'Example word', '詳細': 'Details', '播放': 'Play', '播放例字': 'Play example word', '播放範例': 'Play example', '播放整句': 'Play sentence',
+'再聽一次': 'Listen again', '按下按鈕聽發音，再選出意思': 'Tap the button to hear it, then pick the meaning', '播放發音': 'Play sound',
+// ---- 查字、單字頁 ----
+'查字': 'Look up', '看完整說明': 'See full details', '看完整變化表': 'See full forms', '找不到這個字。': 'Word not found.',
+'編輯或刪除這個字': 'Edit or delete this word', '已移回未學': 'Moved back to New', '移回未學': 'Move back to New', '已經會了': 'I know it',
+// ---- 單選、填空 ----
+'提示：第一個字母是': 'Hint: first letter is', '提示': 'Hint', '收起提示': 'Hide hint', '填入答案': 'Type your answer',
+'，但注意重音': ', but watch the accent', '正確寫法：': 'Correct spelling: ', '正確答案：': 'Answer: ',
+'這個來源裡沒有動詞。可以換一個題目來源，或先到字卡把動詞列入考題。': 'There are no verbs in this source. Pick another source, or add some verbs to your quiz in Cards first.',
+'這一輪完成了': 'Round complete', '再來一輪': 'Another round',
+// ---- 文法 ----
+'文法關卡': 'Grammar stages', '全部過關了！': 'All stages cleared!', '過關！': 'Passed!', '已過關': 'Passed', '全對，': 'Perfect! ',
+'這個文法你會了。': 'You’ve got this grammar point.', '差一點，看一下範例再練一次。': 'Almost — look at the examples and try again.',
+'先看範例拆解，再回來試試。': 'Look at the example breakdowns first, then try again.', '再練一次': 'Try again', '看範例': 'Examples', '看範例拆解': 'See example breakdowns',
+'文法練習': 'Grammar practice', '文法分頁': 'Grammar sections', '說明': 'Explanation', '練習題': 'Practice', '文法列表': 'Grammar list', '‹ 文法列表': '‹ Grammar list',
+'照順序學，後面的文法會用到前面的。每個文法點看完說明和範例，練習題答對八成就過關（6 題要對 5 題）；一關全部過關，下一關就會打開。': 'Learn in order — later points build on earlier ones. Read each point’s explanation and examples; get 80% of the practice right to pass (5 of 6). Clear a whole stage to unlock the next.',
+'全部關卡都過了': 'all stages cleared',
+'文法排列': 'Grammar view', '關卡（照順序學）': 'Stages (in order)', '分類': 'By topic', '詞性變化規則': 'Word-form rules', '實際變化例子': 'Real examples',
+'點一下看完整的變化表。': 'Tap one to see all its forms.', '找不到符合的文法。': 'No matching grammar.', '搜尋文法': 'Search grammar',
+'上面是整句，中間每個字下面是它的中文，最後一條一條說明為什麼這樣排。點句子裡的字可以查意思。': 'The whole sentence is on top, each word’s meaning is under it, and the notes explain why it’s put together that way. Tap any word to look it up.',
+'白話': 'In plain words', '為什麼：': 'Why: ', '不知道要用哪個？看變化表': 'Not sure which one? See the forms table',
+'黃色是這個文法點，點任何一個字可以查意思。': 'This grammar point is highlighted in yellow. Tap any word to look it up.',
+'目前的例句裡還沒有用到這個文法。': 'None of the example sentences use this grammar yet.', '出自單字：': 'From the word: ',
+// ---- 單字庫、設定 ----
+'木琴：字母': 'Xylophone: letters', '字卡、單選、單字庫和點字看意思都會跟著換。': 'Cards, Choice, Words and tap-to-look-up all follow this.',
+'切換後會重新載入，所有語言頁一起換。學的語言不變；選 English 時，單字意思、說明和例句翻譯也會換成英文。': 'The page reloads and every language switches together. The language you study stays the same; with English, word meanings, explanations and sentence translations switch to English too.',
+'語音只存在這台裝置；速度和日文共用。': 'The voice is saved on this device only; the speed is shared with Japanese.',
+'各語言的進度存在同一個帳號裡；備份碼也是同一串，每個語言頁都能匯入。所有設定（外觀、音效、題數、意思、介面語言）各語言共用，在哪一頁改都一樣。': 'All languages’ progress lives in the same account, and the backup code is the same string — import it on any language page. All settings (appearance, sounds, questions per round, meanings, interface language) are shared by every language, whichever page you change them on.',
+'每輪題數會套用到發音練習、單選、字卡和填空。「最近學過」一輪會出完範圍內的全部字；錯題複習每輪 10 題，從以前錯過的字輪流抽，抽過的要等其他字都出過才會再出現。': 'Round size applies to sound practice, Choice, Cards and Fill-in. A “Recently learned” round covers every word in the range; mistake review gives 10 per round, rotating through words you got wrong so each comes back only after the others have had a turn.',
+'單字或片語': 'Word or phrase', '更多：例句、詞性（可以不填）': 'More: example sentence, part of speech (optional)', '詞性（只用來篩選）': 'Part of speech (for filtering only)',
+'單選答錯': 'Choice: wrong', '填空答錯': 'Fill-in: wrong', '單選錯題複習中': 'Choice: reviewing mistakes', '填空錯題複習中': 'Fill-in: reviewing mistakes',
+'<p style="padding:16px">這個 App 需要開啟 JavaScript。</p>': '<p style="padding:16px">This app needs JavaScript turned on.</p>',
+'重設': 'Reset', '取消': 'Cancel', '震動': 'Vibration', '語音': 'Voice', '倍': '×',
+'每個語言的進度會一起存到雲端。': 'Progress for every language is saved to the cloud together.',
+'這個 App 需要開啟 JavaScript。': 'This app needs JavaScript turned on.',
+// ---- 導覽 ----
+'切換語言': 'Switch language', '點左上角的語言名稱可以換到別的語言；也可以鎖定只學其中幾個語言，避免一次學太多。': 'Tap the language name at the top left to switch languages. You can also lock it to just a few languages so you don’t take on too many at once.',
+'字母表點一下可以聽發音、看例字；「規則」整理拼字怎麼唸，「練習」有聽音選拼字、看拼字選讀法。': 'Tap a letter to hear it and see an example word. “Rules” explains how spelling is pronounced; “Practice” has listen → spelling and spelling → sound.',
+'字卡：挑要學的字': 'Cards: pick words to learn', '新字一張一張看：已經會的按「已經會了」，想練的按「列入考題」，之後單選和填空就會出這些字。': 'Go through new words one card at a time: tap “I know it” for ones you know and “Add to quiz” for ones to practice — Choice and Fill-in will then quiz you on them.',
+'看例句打出空格裡的字，答對才算「已學會」，之後照時間排到期複習。': 'Type the missing word in the example sentence. A word only counts as “Learned” once you get it right here; after that it comes back for review on schedule.',
+'文法分成好幾關，照順序學：每個文法點有說明、拆開的範例和練習題，答對八成就過關。下面還有詞性變化規則。': 'Grammar is split into stages to learn in order: each point has an explanation, broken-down examples and practice — get 80% right to pass. Word-form rules are further down.',
+'單字庫・設定': 'Words & settings', '看進度、搜尋單字、進入錯題和到期複習。下面的「設定」可以調音效、選語音、用 Google 登入同步進度。': 'See your progress, search words, and jump into mistakes and due reviews. “Settings” below lets you adjust sounds, choose a voice and sign in with Google to sync.',
+'上方的小按鈕': 'The small buttons on top', '「名」切換名詞上方的性別標示，最右邊切換淺色／深色。': 'The “G” button toggles gender marks above nouns; the one on the far right switches light/dark.',
+'最右邊的按鈕切換淺色／深色。': 'The button on the far right switches light/dark.', '小提示': 'Tip',
+'例句裡的單字都可以點，會跳出意思和詳細資料。準備好就開始吧！': 'You can tap any word in an example sentence to see its meaning and details. Ready? Let’s start!',
+// ---- 語言選單（lang.js）----
+'從五十音開始，學 N5 單字和文法': 'Start with kana, then N5 words and grammar', '入門：字母、發音、基本單字和文法': 'Beginner: alphabet, pronunciation, basic words and grammar',
+'入門：從西里爾字母開始': 'Beginner: starting with the Cyrillic alphabet', '給已經 B1 的人：B2 單字和片語': 'For B1 learners: B2 words and phrases',
+'還沒開始': 'Not started', '語言': 'Languages', '暫停中': 'Paused', '換進來': 'Switch in', '之後會加入': 'Coming later', '準備中': 'In progress',
+'鎖定語言': 'Lock languages', '只開放幾個語言，想開新的要先暫停一個': 'Only a few languages are open; pause one to start a new one',
+'同時學習': 'Studying at once', '同時學習的語言數': 'Languages at once', '鎖定的理由': 'Why I locked it', '寫一句話提醒自己，想換語言時會先看到它': 'Write a note to yourself — you’ll see it first when you want to switch languages',
+'寫下': 'Write', '修改': 'Edit', '開': 'On', '關': 'Off', '儲存': 'Save',
+'例如：「先把日文和義大利文學到能用再說」。想換語言時，會先看到這句話。': 'For example: “Get Japanese and Italian to a usable level first.” You’ll see this note first when you want to switch languages.',
+'你鎖定時寫下的理由': 'The reason you wrote when locking', '暫停它': 'Pause it', '先不要換': 'Not now',
+'你想學哪個語言？': 'Which language do you want to learn?', '先選一個開始。之後隨時可以點左上角的語言名稱換語言，或多加一個一起學。': 'Pick one to start. You can switch any time by tapping the language name at the top left, or add another to study alongside.',
+};
+const LR = [];
+const R = (r, f) => LR.push([r, f]);
+const NM = { '日語': 'Japanese', '日文': 'Japanese', '義大利文': 'Italian', '西班牙文': 'Spanish', '德文': 'German', '俄文': 'Russian', '英文': 'English' };
+const SH = { '義': 'IT', '西': 'ES', '德': 'DE', '俄': 'RU', '英': 'EN' };
+const N = x => NM[x] || x;
+const T = x => E.content[x] ?? E.dict[x] ?? x;
+const LNS = '(日語|日文|義大利文|西班牙文|德文|俄文|英文)';
+const RX = src => new RegExp(src.replace(/LN/g, LNS));
+R(/^(義|西|德|俄|英)→中$/, (m, a) => `${SH[a]} → meaning`);
+R(/^中→(義|西|德|俄|英)$/, (m, a) => `Meaning → ${SH[a]}`);
+R(RX('^歡迎使用LN (\\S+)$'), (m, a, l) => `Welcome to ${N(a)} ${l}`);
+R(RX('^從字母和發音開始，學LN (\\S+) 的單字和文法。用 30 秒認識每個分頁。$'), (m, a, l) => `Start with the alphabet and pronunciation, then learn ${N(a)} ${l} words and grammar. Here’s a 30-second tour of each tab.`);
+R(RX('^LN發音$'), (m, a) => `${N(a)} pronunciation`);
+R(RX('^LN語音（這台裝置）$'), (m, a) => `${N(a)} voice (this device)`);
+R(RX('^還沒有讀到LN語音，系統會用預設聲音。$'), (m, a) => `No ${N(a)} voice found yet; the system default will be used.`);
+R(RX('^搜尋：LN、中文或英文$'), (m, a) => `Search: ${N(a)}, Chinese or English`);
+R(RX('^輸入LN$'), (m, a) => `Type in ${N(a)}`);
+R(RX('^清除LN的學習紀錄$'), (m, a) => `Clear ${N(a)} progress`);
+R(RX('^清除LN紀錄$'), (m, a) => `Clear ${N(a)} progress`);
+R(RX('^只清LN，其他語言的進度不會動。自己新增的單字會留著。$'), (m, a) => `Only ${N(a)} is cleared; other languages aren’t touched. Words you added yourself are kept.`);
+R(RX('^確定要清除LN的所有學習紀錄嗎？這個動作不能復原，可以先「匯出進度」備份。其他語言的進度不會動。$'), (m, a) => `Clear all ${N(a)} progress? This can’t be undone — you can “Export progress” first as a backup. Other languages aren’t affected.`);
+R(RX('^已清除LN的紀錄$'), (m, a) => `${N(a)} progress cleared`);
+R(RX('^這裡只匯入LN；其他語言請在各自的頁面匯入同一串碼。$'), (m, a) => `Only ${N(a)} is imported here; import the same code on each language’s page for the others.`);
+R(RX('^已匯入 (\\d+) 筆LN紀錄$'), (m, n, a) => `Imported ${n} ${N(a)} records`);
+R(RX('^LN已學會 (.+)$'), (m, a, x) => `${N(a)} learned ${x}`);
+R(RX('^目前是LN，點一下切換語言$'), (m, a) => `Current: ${N(a)} — tap to switch language`);
+R(RX('^換成LN$'), (m, a) => `Switch to ${N(a)}`);
+R(RX('^要開始學LN，得先暫停一個語言。暫停的語言進度都會保留。$'), (m, a) => `To start ${N(a)}, pause one language first. Paused languages keep their progress.`);
+R(RX('^已暫停LN$'), (m, a) => `${N(a)} paused`);
+R(/^已暫停：(.+)$/, (m, a) => 'Paused: ' + a.split('、').map(N).join(', '));
+R(RX('^回到LN$'), (m, a) => `Back to ${N(a)}`);
+R(RX('^(.+)（LN）$'), (m, a, b) => `${T(a)} (${N(b)})`);
+R(/^學習中（最多 (\d+) 個）$/, 'Studying (up to $1)');
+R(/^(\d+) 個$/, '$1');
+R(/^已學會 (.+)・(\d+)／(\d+) 字$/, 'Learned $1 · $2/$3 words');
+R(/^共 (\d+) 字，包含所有語言。$/, '$1 characters, covering every language.');
+R(/^第 (\d+) 關・(.+)$/, (m, n, x) => `Stage ${n} · ${T(x)}`);
+R(/^繼續學：(.+)$/, (m, x) => `Continue: ${T(x)}`);
+R(/^下一個：(.+)$/, (m, x) => `Next: ${T(x)}`);
+R(/^已過關 (\d+) \/ (\d+)$/, 'Passed $1 / $2');
+R(/^完成上一關就會打開・先偷看這關的 (\d+) 個文法$/, 'Opens when you finish the previous stage · peek at its $1 grammar points');
+R(/^練習題答對 (\d+) 題就過關$/, 'Get $1 right to pass');
+R(/^答對 (\d+) 題才算過關。$/, 'You need $1 right to pass. ');
+R(/^第 (\d+) 關完成！第 (\d+) 關打開了$/, 'Stage $1 complete! Stage $2 is open');
+R(/^第 (\d+) 關完成！全部關卡都過了$/, 'Stage $1 complete! All stages cleared');
+R(/^文法練習 (\d+) \/ (\d+)$/, 'Grammar practice $1 / $2');
+R(/^看懂了，來練習（(\d+) 題）$/, 'Got it — practice ($1)');
+R(/^範例 (\d+)$/, 'Example $1');
+R(/^App 裡的字（(\d+)）$/, 'Words in the app ($1)');
+R(/^App 裡用到的例句（(\d+)）$/, 'Example sentences in the app ($1)');
+R(/^(\d+) 個字$/, (m, n) => n + (n === '1' ? ' word' : ' words'));
+R(/^看「(.+)」的詞性和變化$/, 'See part of speech and forms of “$1”');
+R(/^播放 (.+)$/, 'Play $1');
+R(/^(.+)，字母名稱 (.+)$/, '$1, letter name $2');
+R(/^字母名稱：$/, 'Letter name: ');
+R(/^(.+)，例字 (.+)$/, '$1, example word $2');
+R(/^畫線的「(.+)」怎麼唸？$/, 'How is the underlined “$1” pronounced?');
+R(/^，共 (\d+) 個字母$/, (m, n) => `, ${n} letters`);
+R(/^，共 (\d+) 個字母（(\d+) 個字）$/, (m, n, k) => `, ${n} letters (${k} words)`);
+R(/^（(\d+) 個字）$/, ' ($1 words)');
+R(/^答對 (\d+) \/ (\d+) 題$/, '$1 / $2 correct');
+R(/^(\d+\/\d+) · 第\s?(\d+)級$/, '$1 · level $2');
+R(/^下次複習：(\S+)（第 (\d+) 級）$/, 'Next review: $1 (level $2)');
+R(/^已標記為學會，(\d+) 天後會再考一次$/, 'Marked as learned — it comes back in $1 days');
+R(/^(.+) · 單字$/, (m, a) => `${T(a)} · Word`);
+R(/^(.+) 是「(.+)」，意思很接近，但這題要的是另一個字，再想想看。$/, '$1 means “$2” — close, but this one wants a different word. Try again.');
+R(/^（你寫的是 (.+)）$/, ' (you wrote $1)');
+R(/^例句裡找不到「(.+)」。如果這個字在例句裡有變化，請在「例句裡的寫法」填上例句裡的樣子。$/, '“$1” isn’t in the sentence. If it changes form there, enter that form in “Form used in the sentence”.');
+R(/^今天的 (\d+) 題完成了！$/, 'Today’s $1 done!');
+R(/^填空的提示（第一個字母、字母數）$/, 'Fill-in hints (first letter, letter count)');
+R(/^搜尋文法：(.+)$/, 'Search grammar…');
+
+Object.assign(E.dict, LD);
+E.re.unshift(...LR);
+})();
+
+;
 /* 語言頁（義大利文、西班牙文、德文、俄文…）：放在日文 N5 App 裡
    語言專屬的文字和設定放在 window.LANGCFG，資料和變化引擎放在 window.LX
    - 介面、音效、下拉選單、間隔複習規則都跟日文頁一樣
@@ -3279,6 +3816,8 @@ IT.GX_PATH = [
 const IT = window.LX || window.IT;
 const LC = window.LANGCFG;
 const LP = LC.id + ':';
+// 英文介面：建立資料前，先把語言包裡的中文內容（文法說明、練習題、例句翻譯…）照 <代碼>/i18n.js 換成英文（lang-i18n.js 的 I18N.applyContent）
+if (typeof I18N !== 'undefined' && I18N.applyContent && (store.get('n5:settings', {}) || {}).lang === 'en') I18N.applyContent(IT, LC);
 // 名詞性別的名稱（德文多一個中性），語言包沒給就用陽／陰
 const GEN = IT.GENDER || { m: ['陽性', '陽'], f: ['陰性', '陰'] };
 const genOf = g => GEN[g] || GEN.f || ['', ''];
@@ -3347,7 +3886,51 @@ let S = store.get('n5:progress', null);
 if (!S || typeof S !== 'object' || !S.items) S = { items: {}, days: {} };
 S.days = S.days || {};
 const SET = Object.assign({ vib: 'on', sfx: 'on', round: 20, recent: 'd1', mean: 'zh', theme: 'system', rate: 0.9 }, store.get('n5:settings', {}));
-UIKit.bind({ SET });   // ui.js 的音效、震動、下拉選單用這頁的設定
+// ================= 介面語言（中文／English；日文頁和語言頁共用：n5src/shared/i18n.js） =================
+// 程式裡的介面文字都寫中文；選 English 時，畫面上的中文由對照表（I18N.en：i18n-ui.js、ja/i18n.js、lang-i18n.js、各語言的 i18n.js）即時換成英文。
+// 學的語言（有 lang="ja"、lang="it"… 的區塊，或 class="ja"）不會動。換語言時重新載入頁面，避免中英混雜。
+// 用頁面的 SET（設定 lang）；要在 SET 後面、畫面出來前載入。
+const LANG = SET.lang === 'en' && typeof I18N !== 'undefined' ? 'en' : 'zh';
+const I18 = LANG === 'en' ? I18N.en : null;
+const HAN = /[㐀-鿿]/;
+const i18nMiss = new Set();
+function trText(str) {
+  if (!I18 || !str || !HAN.test(str)) return null;
+  const m = str.match(/^(\s*)([\s\S]*?)(\s*)$/), t = m[2];
+  let out = I18.dict[t];
+  if (out == null) {
+    for (const [re, rp] of I18.re) { if (re.test(t)) { out = t.replace(re, typeof rp === 'function' ? (...a) => rp(...a) : rp); break; } }
+  }
+  if (out == null) { i18nMiss.add(t); return null; }
+  return m[1] + out + m[3];
+}
+const L = str => trText(str) ?? str; // 給 toast、confirm 這類不經過畫面的文字用
+const TR_ATTRS = ['title', 'aria-label', 'placeholder'];
+// 學的語言的區塊：lang 不是 en／zh（lang="ja"、"it"…），或 class="ja"、data-noi18n、textarea
+const isStudy = el => { const l = el.getAttribute('lang'); return !!l && !/^(en|zh)/i.test(l); };
+function trNode(n) {
+  if (n.nodeType === 3) { const v = trText(n.nodeValue); if (v != null && v !== n.nodeValue) n.nodeValue = v; return; }
+  if (n.nodeType !== 1) return;
+  const tag = n.tagName;
+  if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA' || isStudy(n) || n.classList.contains('ja') || n.hasAttribute('data-noi18n')) return;
+  for (const a of TR_ATTRS) { const v0 = n.getAttribute(a); if (v0) { const v = trText(v0); if (v != null && v !== v0) n.setAttribute(a, v); } }
+  for (let c = n.firstChild; c; c = c.nextSibling) trNode(c);
+}
+const inStudy = n => { let e = n && (n.nodeType === 1 ? n : n.parentElement); for (; e && e !== document.documentElement; e = e.parentElement) { if (e.tagName === 'TEXTAREA' || isStudy(e) || e.classList.contains('ja') || e.hasAttribute('data-noi18n')) return true; } return false; };
+if (I18) {
+  document.documentElement.lang = 'en';
+  if (I18.title) document.title = I18.title;
+  trNode(document.body);
+  new MutationObserver(recs => {
+    for (const r of recs) {
+      if (r.type === 'childList') { for (const n of r.addedNodes) if (!inStudy(n.parentNode || n)) trNode(n); }
+      else if (r.type === 'characterData') { if (!inStudy(r.target)) trNode(r.target); }
+      else if (r.type === 'attributes') { const el = r.target, v0 = el.getAttribute(r.attributeName); if (v0 && !inStudy(el)) { const v = trText(v0); if (v != null && v !== v0) el.setAttribute(r.attributeName, v); } }
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: TR_ATTRS });
+  window.__i18nMiss = i18nMiss;
+}
+UIKit.bind({ SET, t: L });   // ui.js 的音效、震動、下拉選單用這頁的設定和翻譯
 const ISET = Object.assign({ voice: '' }, store.get(LP + 'settings', {}));
 const UI = Object.assign({ tab: 'card', pronSec: 'abc', pronMode: 'listen', mcMode: 'it2zh', mcSrc: 'learn', fillSrc: 'learn', cardSrc: 'new', pos: 'all', gramSel: '', gramQ: '', gramView: 'path' }, store.get(LP + 'ui', {}));
 // 每次都重新讀一次共用設定再寫回，避免蓋掉日文頁剛改的值
@@ -4596,8 +5179,8 @@ const PAGE = {
     meanNote: '',
     langHTML: () => `<section><h4>介面語言 Language</h4>
           <label class="label" for="langSel">介面語言</label>
-          <select id="langSel"><option value="zh"${SET.lang !== 'en' ? ' selected' : ''}>中文（繁體）</option><option value="en"${SET.lang === 'en' ? ' selected' : ''}>English</option></select>
-          <div class="meta">${LC.name}頁目前只有中文介面；選 English 會套用到日語頁。</div>
+          <select id="langSel" data-noi18n><option value="zh"${LANG === 'zh' ? ' selected' : ''}>中文（繁體）</option><option value="en"${LANG === 'en' ? ' selected' : ''}>English</option></select>
+          <div class="meta">切換後會重新載入，所有語言頁一起換。學的語言不變；選 English 時，單字意思、說明和例句翻譯也會換成英文。</div>
           <button class="btn quiet" id="tourBtn" style="min-height:40px;margin-top:6px">重看使用導覽</button>
         </section>`,
     extraHTML: () => '',
@@ -4613,7 +5196,7 @@ const PAGE = {
     wordCell: w => `<span class="w" lang="${LC.id}" data-word="${esc(w.id)}" style="cursor:pointer;font-family:var(--font-ui)">${esc(w.title)}</span>`,
     onEntryMc: () => { if (UI.mcMode === 'art') UI.mcMode = 'it2zh'; },
     bind() {
-      $('#langSel').onchange = e => { SET.lang = e.target.value; saveSet(); toast(SET.lang === 'en' ? '日語頁會換成英文介面' : '介面語言：中文'); };
+      $('#langSel').onchange = e => setLang(e.target.value);
       $('#tourBtn').onclick = () => Tour.start(0);
       $('#resetIt').onclick = () => {
         const el = Sheet.open(`清除${LC.name}紀錄`, `<p style="margin:0">確定要清除${LC.name}的所有學習紀錄嗎？這個動作不能復原，可以先「匯出進度」備份。其他語言的進度不會動。</p><div class="btnrow"><button class="btn quiet" id="rsNo">取消</button><button class="btn solid" id="rsYes">清除</button></div>`);
@@ -5040,8 +5623,17 @@ function refreshPassive(force) {
 }
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { reloadShared(); refreshPassive(); Cloud.schedule(500); } });
 // 同一台裝置在別的分頁改了進度（例如日文頁）
-window.addEventListener('storage', e => { if (e.key === 'n5:progress') { reloadShared(); refreshPassive(); } if (e.key === 'n5:settings') { Object.assign(SET, store.get('n5:settings', {})); applyTheme(); applyGen(); } });
+window.addEventListener('storage', e => { if (e.key === 'n5:progress') { reloadShared(); refreshPassive(); } if (e.key === 'n5:settings') { const nl = (store.get('n5:settings', {}) || {}).lang === 'en' ? 'en' : 'zh'; if (nl !== LANG && typeof I18N !== 'undefined') return location.reload(); Object.assign(SET, store.get('n5:settings', {})); applyTheme(); applyGen(); } });
 
+// 換介面語言（所有頁共用 n5:settings 的 lang）：單字意思跟著換，再重新載入
+function setLang(lang) {
+  if (lang === LANG) return;
+  SET.lang = lang;
+  if (lang === 'en' && SET.mean === 'zh') SET.mean = 'en';
+  if (lang === 'zh' && SET.mean === 'en') SET.mean = 'zh';
+  saveSet();
+  location.reload();
+}
 // ================= 首次使用導覽（各語言的文字可以在 config.js 用 tourIntro、tourPron、tourFill 覆寫） =================
 PAGE.tour = {
   key: LP + 'toured',
