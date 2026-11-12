@@ -129,6 +129,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 ## 最近做過的改動
 
 - **App 改名 Langgern**（2026-11-12 使用者要求）：manifest.json 的 name／short_name、所有頁面的 `<title>` 和 apple-mobile-web-app-title、English 介面的標題（ja/i18n.js、lang-i18n.js）。原始檔在 ja/page.html、lang-template.html。manifest 的 `id` 沒動，已經裝到主畫面的 App 不會被當成新的 App；主畫面上的名字有些手機要重新加到主畫面才會換。GitHub repo 名稱和網址沒改。
+  - 那次的 zip 是在 Windows 用 pack.py 打包的，檔案被標成 Windows 系統（create_system 0），Actions 的 unzip 把中文檔名解成亂碼，多出一個亂碼檔名的交接文件。已修：pack.py 一律標成 Unix（create_system 3），並刪掉亂碼檔。**在 Windows 打包一定要用新版 pack.py**（不要用 Windows 內建的壓縮）。
 
 - **英文介面套用到所有語言頁**（2026-11-11，第一步：介面）：設定裡的「介面語言」選 English 會套用到整個 App（日文頁和義、西、德、俄、英頁一起換，換了會重新載入；別的分頁換了也會跟著重新載入）。
   - 翻譯的程式從 ja/app.js 搬到 `n5src/shared/i18n.js`（trText、L、trNode、MutationObserver），兩種頁面共用；學的語言（`lang="ja"`、`lang="it"`…，或 class="ja"、data-noi18n、textarea）不會被翻。
