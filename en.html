@@ -598,6 +598,22 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .sq .sm{font-size:.62em;transform:translate(-18%,14%)}
 .kc .kk.kk2{letter-spacing:-.14em;margin-right:-.14em;font-feature-settings:"palt"}
 
+/* 一個一個學（五十音表最上面）：大的練字格＋筆順動畫 */
+.kstep{display:flex;flex-direction:column;gap:12px}
+.kstep-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.kstep-head h3{margin:0;font-size:17px}
+.kstep .sqs{border:0;padding:0;background:none;cursor:pointer;align-self:center}
+.kstep .sq{width:124px;height:124px}
+.kstep .sqs.two .sq{width:84px;height:84px}
+.kstroke{position:relative;z-index:1;width:100%;height:100%;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.kstroke .kguide{stroke:var(--line);stroke-width:5}
+.kstroke .kink{stroke:var(--fg);stroke-width:5}
+.kstroke .knum{fill:var(--pri);stroke:none;font:700 9px var(--font-ui);text-anchor:middle}
+.kstep-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kcredit{margin:0;font-size:12px}
+.kcredit a{color:inherit}
+@media (max-width:370px){.kstep .sq{width:112px;height:112px}.kstep .sqs.two .sq{width:68px;height:68px}}
+
 /* 聽寫 */
 .dict-play{display:flex;align-items:center;justify-content:center;gap:14px;margin:14px 0 12px}
 .dict-big{width:84px;height:84px;border-radius:999px;border:2px solid var(--fill-deep);background:linear-gradient(180deg,color-mix(in srgb,var(--fill) 85%,#fff),var(--fill));color:var(--fill-ink);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 4px 0 var(--fill-deep);transition:transform .08s,box-shadow .08s}
@@ -3724,6 +3740,7 @@ const D = {
 // ---- 五十音 ----
 '假名': 'Kana', '檢視': 'View', '平假名': 'Hiragana', '片假名': 'Katakana', '五十音表': 'Chart', '練習': 'Practice', '表格分類': 'Chart sections',
 '清音': 'Basic', '濁音': 'Voiced', '半濁音': 'Semi-voiced', '拗音': 'Combined', '濁音・半濁音': 'Voiced & semi-voiced',
+'一個一個學': 'One by one', '上一個假名': 'Previous', '下一個假名': 'Next', '重播筆順': 'Replay', '去練習': 'Practice', '筆順資料：': 'Stroke order data: ', '（CC BY-SA 3.0）': ' (CC BY-SA 3.0)',
 '開始練習': 'Start practice', '開始練習平假名': 'Practice hiragana', '開始練習片假名': 'Practice katakana', '容易混淆：': 'Easy to confuse: ',
 '促音「っ」與長音的說明': 'About the small っ and long vowels', '促音「っ／ッ」': 'Small tsu (っ／ッ)',
 '寫成小的「っ」，不發音，但要': 'Written as a small っ. It has no sound of its own, but you', '停頓一拍': 'pause for one beat',
@@ -4010,6 +4027,8 @@ R(/^已學會，明天（(.+)）會出現在到期複習。$/, 'Learned! It will
 R(/^下次複習：(.+)$/, 'Next review: $1');
 R(/^已學會 (\d+)\/(\d+)$/, 'Learned $1/$2');
 R(/^作答 (\d+) 次$/, 'answered $1 times');
+R(/^共 (\d+) 筆$/, (m, n) => n + (n === '1' ? ' stroke' : ' strokes'));
+R(/^(.+)，重播筆順$/, '$1, replay stroke order');
 R(/^最近學過：(.+)$/, (m, a) => 'Recently learned: ' + t(a));
 R(/^(N5(?:～N\d)?) 已經會了$/, (m, a) => 'I know ' + a.replace('～', '–'));
 R(/^已隱藏 (N\d) 以下的文法$/, 'Hiding grammar at $1 and below');
