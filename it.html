@@ -833,6 +833,16 @@ body.hide-gen .sent{line-height:1.75}
 .gx-hint[open]>summary{margin-bottom:8px}
 .gx-hint .gbody table{margin:6px 0}
 
+/* 手寫體動畫（俄文字母面板） */
+.cursv{display:flex;justify-content:center;align-items:flex-end;gap:0;width:100%;margin:6px 0 0;padding:8px 4px;border:1px solid var(--line);border-radius:14px;background:var(--surface);cursor:pointer;font-size:16px}
+.cstroke{height:8em;max-width:50%;fill:none;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.cstroke .cg{stroke:var(--line);stroke-width:1}
+.cstroke .cm{stroke-dasharray:4 4}
+.cstroke .cb{stroke-width:1.6}
+.cstroke .cink{stroke:var(--fg);stroke-width:4.2}
+.cursv-note{margin:4px 0 0;display:flex;flex-wrap:wrap;gap:2px 8px}
+.cursv-note span:last-child{color:var(--muted)}
+
 :root{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 900' preserveAspectRatio='xMidYMax slice'%3E%3Ccircle cx='330' cy='150' r='46' fill='%23f7e6cc'/%3E%3Crect x='40' y='120' width='90' height='12' rx='6' fill='%23e6ebf3'/%3E%3Crect x='70' y='140' width='60' height='12' rx='6' fill='%23e6ebf3'/%3E%3Crect x='250' y='250' width='110' height='12' rx='6' fill='%23e6ebf3'/%3E%3Crect x='290' y='270' width='70' height='12' rx='6' fill='%23e6ebf3'/%3E%3Cpath d='M80 210 q6 -6 12 0 q6 -6 12 0' fill='none' stroke='%23cdd5e2' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M110 232 q6 -6 12 0 q6 -6 12 0' fill='none' stroke='%23cdd5e2' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M-10 640 C 60 585 130 585 200 610 C 260 630 320 580 430 600 L430 910 L-10 910Z' fill='%23e6ebf3'/%3E%3Cg fill='%23dde4ef'%3E%3Crect x='238' y='548' width='9' height='44'/%3E%3Cpath d='M236 548 l6.5 -10 l6.5 10z'/%3E%3Crect x='252' y='572' width='18' height='22'/%3E%3Crect x='272' y='566' width='14' height='28'/%3E%3Crect x='288' y='576' width='20' height='18'/%3E%3Crect x='218' y='578' width='16' height='16'/%3E%3Cpath d='M200 594 a16 16 0 0 1 32 0z'/%3E%3C/g%3E%3Cg fill='%23d3dbe8'%3E%3Cpath d='M251 572 l10 -7 l10 7z'/%3E%3Cpath d='M271 566 l8 -6 l8 6z'/%3E%3Cpath d='M287 576 l11 -6 l11 6z'/%3E%3Cpath d='M217 578 l9 -6 l9 6z'/%3E%3C/g%3E%3Cpath d='M-10 720 C 70 670 150 690 220 705 C 290 720 350 670 430 685 L430 910 L-10 910Z' fill='%23d8e0ec'/%3E%3Cpath d='M40 706 q8 -35.2 8 -64 q0 28.8 8 64z' fill='%23c3cede'/%3E%3Cpath d='M62 708 q6.5 -25.3 6.5 -46 q0 20.7 6.5 46z' fill='%23c3cede'/%3E%3Cpath d='M338 690 q8 -38.5 8 -70 q0 31.5 8 70z' fill='%23c3cede'/%3E%3Cpath d='M360 694 q6.5 -27.500000000000004 6.5 -50 q0 22.5 6.5 50z' fill='%23c3cede'/%3E%3Cpath d='M-10 800 C 60 760 150 770 230 785 C 320 802 370 760 430 768 L430 910 L-10 910Z' fill='%23cfd8e6'/%3E%3Cpath d='M286 790 q9 -44 9 -80 q0 36 9 80z' fill='%23c3cede'/%3E%3Cpath d='M310 792 q7.5 -31.900000000000002 7.5 -58 q0 26.1 7.5 58z' fill='%23c3cede'/%3E%3Cpath d='M330 794 q6 -22 6 -40 q0 18 6 40z' fill='%23c3cede'/%3E%3Cpath d='M150 900 C 175 870, 230 860, 222 835 S 255 800, 300 790 L 308 795 C 270 806, 240 820, 245 840 S 200 875, 190 900 Z' fill='%23eef3fa'/%3E%3C/svg%3E")}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 900' preserveAspectRatio='xMidYMax slice'%3E%3Ccircle cx='330' cy='150' r='46' fill='%23252d3a'/%3E%3Crect x='40' y='120' width='90' height='12' rx='6' fill='%23161c26'/%3E%3Crect x='70' y='140' width='60' height='12' rx='6' fill='%23161c26'/%3E%3Crect x='250' y='250' width='110' height='12' rx='6' fill='%23161c26'/%3E%3Crect x='290' y='270' width='70' height='12' rx='6' fill='%23161c26'/%3E%3Cpath d='M80 210 q6 -6 12 0 q6 -6 12 0' fill='none' stroke='%232a3342' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M110 232 q6 -6 12 0 q6 -6 12 0' fill='none' stroke='%232a3342' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M-10 640 C 60 585 130 585 200 610 C 260 630 320 580 430 600 L430 910 L-10 910Z' fill='%23141a23'/%3E%3Cg fill='%231a212c'%3E%3Crect x='238' y='548' width='9' height='44'/%3E%3Cpath d='M236 548 l6.5 -10 l6.5 10z'/%3E%3Crect x='252' y='572' width='18' height='22'/%3E%3Crect x='272' y='566' width='14' height='28'/%3E%3Crect x='288' y='576' width='20' height='18'/%3E%3Crect x='218' y='578' width='16' height='16'/%3E%3Cpath d='M200 594 a16 16 0 0 1 32 0z'/%3E%3C/g%3E%3Cg fill='%23202836'%3E%3Cpath d='M251 572 l10 -7 l10 7z'/%3E%3Cpath d='M271 566 l8 -6 l8 6z'/%3E%3Cpath d='M287 576 l11 -6 l11 6z'/%3E%3Cpath d='M217 578 l9 -6 l9 6z'/%3E%3C/g%3E%3Cpath d='M-10 720 C 70 670 150 690 220 705 C 290 720 350 670 430 685 L430 910 L-10 910Z' fill='%2318202b'/%3E%3Cpath d='M40 706 q8 -35.2 8 -64 q0 28.8 8 64z' fill='%23111720'/%3E%3Cpath d='M62 708 q6.5 -25.3 6.5 -46 q0 20.7 6.5 46z' fill='%23111720'/%3E%3Cpath d='M338 690 q8 -38.5 8 -70 q0 31.5 8 70z' fill='%23111720'/%3E%3Cpath d='M360 694 q6.5 -27.500000000000004 6.5 -50 q0 22.5 6.5 50z' fill='%23111720'/%3E%3Cpath d='M-10 800 C 60 760 150 770 230 785 C 320 802 370 760 430 768 L430 910 L-10 910Z' fill='%231c2531'/%3E%3Cpath d='M286 790 q9 -44 9 -80 q0 36 9 80z' fill='%23111720'/%3E%3Cpath d='M310 792 q7.5 -31.900000000000002 7.5 -58 q0 26.1 7.5 58z' fill='%23111720'/%3E%3Cpath d='M330 794 q6 -22 6 -40 q0 18 6 40z' fill='%23111720'/%3E%3Cpath d='M150 900 C 175 870, 230 860, 222 835 S 255 800, 300 790 L 308 795 C 270 806, 240 820, 245 840 S 200 875, 190 900 Z' fill='%2310151d'/%3E%3C/svg%3E")}}
 :root[data-theme="dark"]{--pat:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 420 900' preserveAspectRatio='xMidYMax slice'%3E%3Ccircle cx='330' cy='150' r='46' fill='%23252d3a'/%3E%3Crect x='40' y='120' width='90' height='12' rx='6' fill='%23161c26'/%3E%3Crect x='70' y='140' width='60' height='12' rx='6' fill='%23161c26'/%3E%3Crect x='250' y='250' width='110' height='12' rx='6' fill='%23161c26'/%3E%3Crect x='290' y='270' width='70' height='12' rx='6' fill='%23161c26'/%3E%3Cpath d='M80 210 q6 -6 12 0 q6 -6 12 0' fill='none' stroke='%232a3342' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M110 232 q6 -6 12 0 q6 -6 12 0' fill='none' stroke='%232a3342' stroke-width='2' stroke-linecap='round'/%3E%3Cpath d='M-10 640 C 60 585 130 585 200 610 C 260 630 320 580 430 600 L430 910 L-10 910Z' fill='%23141a23'/%3E%3Cg fill='%231a212c'%3E%3Crect x='238' y='548' width='9' height='44'/%3E%3Cpath d='M236 548 l6.5 -10 l6.5 10z'/%3E%3Crect x='252' y='572' width='18' height='22'/%3E%3Crect x='272' y='566' width='14' height='28'/%3E%3Crect x='288' y='576' width='20' height='18'/%3E%3Crect x='218' y='578' width='16' height='16'/%3E%3Cpath d='M200 594 a16 16 0 0 1 32 0z'/%3E%3C/g%3E%3Cg fill='%23202836'%3E%3Cpath d='M251 572 l10 -7 l10 7z'/%3E%3Cpath d='M271 566 l8 -6 l8 6z'/%3E%3Cpath d='M287 576 l11 -6 l11 6z'/%3E%3Cpath d='M217 578 l9 -6 l9 6z'/%3E%3C/g%3E%3Cpath d='M-10 720 C 70 670 150 690 220 705 C 290 720 350 670 430 685 L430 910 L-10 910Z' fill='%2318202b'/%3E%3Cpath d='M40 706 q8 -35.2 8 -64 q0 28.8 8 64z' fill='%23111720'/%3E%3Cpath d='M62 708 q6.5 -25.3 6.5 -46 q0 20.7 6.5 46z' fill='%23111720'/%3E%3Cpath d='M338 690 q8 -38.5 8 -70 q0 31.5 8 70z' fill='%23111720'/%3E%3Cpath d='M360 694 q6.5 -27.500000000000004 6.5 -50 q0 22.5 6.5 50z' fill='%23111720'/%3E%3Cpath d='M-10 800 C 60 760 150 770 230 785 C 320 802 370 760 430 768 L430 910 L-10 910Z' fill='%231c2531'/%3E%3Cpath d='M286 790 q9 -44 9 -80 q0 36 9 80z' fill='%23111720'/%3E%3Cpath d='M310 792 q7.5 -31.900000000000002 7.5 -58 q0 26.1 7.5 58z' fill='%23111720'/%3E%3Cpath d='M330 794 q6 -22 6 -40 q0 18 6 40z' fill='%23111720'/%3E%3Cpath d='M150 900 C 175 870, 230 860, 222 835 S 255 800, 300 790 L 308 795 C 270 806, 240 820, 245 840 S 200 875, 190 900 Z' fill='%2310151d'/%3E%3C/svg%3E")}
@@ -3701,7 +3711,7 @@ const LD = {
 '名詞上方標出性別': 'Showing gender above nouns', '已隱藏性別，點單字可以看詞性': 'Gender hidden — tap a word to see its part of speech',
 '發音': 'Sounds', '發音分頁': 'Sound sections', '字母': 'Letters', '規則': 'Rules', '練習': 'Practice', '練習方式': 'Practice type',
 '聽音選拼字': 'Listen → spelling', '看拼字選讀法': 'Spelling → sound', '聽發音，選出你聽到的拼法': 'Listen, then pick the spelling you heard',
-'字母名稱': 'Letter name', '例字': 'Example word', '詳細': 'Details', '播放': 'Play', '播放例字': 'Play example word', '播放範例': 'Play example', '播放整句': 'Play sentence',
+'重播手寫動畫': 'Replay handwriting', '點一下重播': 'Tap to replay', '字母名稱': 'Letter name', '例字': 'Example word', '詳細': 'Details', '播放': 'Play', '播放例字': 'Play example word', '播放範例': 'Play example', '播放整句': 'Play sentence',
 '再聽一次': 'Listen again', '按下按鈕聽發音，再選出意思': 'Tap the button to hear it, then pick the meaning', '播放發音': 'Play sound',
 // ---- 查字、單字頁 ----
 '查字': 'Look up', '看完整說明': 'See full details', '看完整變化表': 'See full forms', '找不到這個字。': 'Word not found.',
@@ -6481,11 +6491,41 @@ function renderPron() {
 function openLetter(i) {
   const a = IT.ALPHABET[i];
   const w = WORDS.find(x => x.word === a[4]);
-  Sheet.open(`${LC.letterTitle || '字母'} ${esc(a[0])}`, `<div class="rowx"><div class="grow"><div class="w1">${LC.letterAsIs ? esc(a[0]) : a[0] + ' ' + a[0].toLowerCase()}</div><div class="meta">${LC.letterNameLabel || '字母名稱'}：<span lang="${LC.id}">${esc(a[1])}</span></div></div>${iconPlay(a[1], '播放' + (LC.letterNameLabel || '字母名稱'))}</div>
-    <p class="mean-big">${esc(a[2])}</p><p style="margin:0">${esc(a[3])}</p>
+  const el = Sheet.open(`${LC.letterTitle || '字母'} ${esc(a[0])}`, `<div class="rowx"><div class="grow"><div class="w1">${LC.letterAsIs ? esc(a[0]) : a[0] + ' ' + a[0].toLowerCase()}</div><div class="meta">${LC.letterNameLabel || '字母名稱'}：<span lang="${LC.id}">${esc(a[1])}</span></div></div>${iconPlay(a[1], '播放' + (LC.letterNameLabel || '字母名稱'))}</div>
+    <p class="mean-big">${esc(a[2])}</p><p style="margin:0">${esc(a[3])}</p>${cursiveHTML(a[0])}
     <div class="gp-title">例字</div>
     <div class="an"><div class="grow"><b lang="${LC.id}" style="font-size:22px">${esc(w ? w.title : a[4])}</b>${w ? `<div class="meta">${meanW(w)}</div>` : ''}</div>${iconPlay(w ? w.title : a[4], '播放例字')}${w ? `<button class="btn quiet" data-word="${esc(w.id)}">詳細</button>` : ''}</div>`, a[0]);
+  const cb = $('.cursv', el);
+  if (cb) { cb.onclick = () => playCursive(cb); playCursive(cb); }
   setTimeout(() => Voice.speak(a[1]), 150);
+}
+// 手寫體（IT.CURSIVE：每個字的筆畫，座標說明在 ru/cursive.js）：大寫、小寫各一格，一筆一筆畫出來
+function cursiveSVG(ch) {
+  const g = IT.CURSIVE[ch]; if (!g) return '';
+  const [w, ...ps] = g, x0 = -12, x1 = w + 30, wd = x1 - x0;
+  const line = (y, c) => `<line class="${c}" x1="${x0}" x2="${x1}" y1="${y}" y2="${y}"/>`;
+  return `<svg class="cstroke" viewBox="${x0} -8 ${wd} 140" style="width:${(wd / 140 * 8).toFixed(2)}em" aria-hidden="true">${line(10, 'cg')}${line(50, 'cg cm')}${line(90, 'cg cb')}${line(125, 'cg')}<g class="cink" transform="translate(24 0) skewX(-15)">${ps.map(p => `<path d="${p}"/>`).join('')}</g></svg>`;
+}
+function cursiveHTML(up) {
+  if (!IT.CURSIVE) return '';
+  const low = up.toLowerCase(), chars = [up, low].filter(k => IT.CURSIVE[k]);
+  if (!chars.length) return '';
+  const note = (IT.CURSIVE_NOTE || {})[low];
+  return `<div class="gp-title">${LC.cursiveTitle || '手寫體'}</div>
+    <button class="cursv" aria-label="重播手寫動畫">${chars.map(cursiveSVG).join('')}</button>
+    <p class="meta cursv-note">${note ? `<span>${esc(note)}</span>` : ''}<span>點一下重播</span></p>`;
+}
+function playCursive(box) {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let t = 250;
+  $$('.cink path', box).forEach(p => {
+    p.getAnimations && p.getAnimations().forEach(a => a.cancel());
+    if (reduce || !p.animate) return;
+    const L = p.getTotalLength(), dur = Math.max(120, 150 + L * 6);
+    p.style.strokeDasharray = L + 1 + ' ' + (L + 1);
+    p.animate([{ strokeDashoffset: L + 1 }, { strokeDashoffset: 0 }], { duration: dur, delay: t, easing: 'ease-in-out', fill: 'both' });
+    t += dur + 180;
+  });
 }
 function startPron() {
   const mode = UI.pronMode;
