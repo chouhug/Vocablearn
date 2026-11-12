@@ -1,0 +1,248 @@
+# 語言學習 App 交接說明
+
+把這個檔案和 `n5-src.zip` 一起丟給新對話，說「接續這個專案」。
+
+## 專案是什麼
+
+- 原本是日語 N5 學習 PWA（GitHub：`chouhug/Vocablearn`，用 GitHub Pages 發布），現在擴充成多語言學習 App，名稱「Langgern」（2026-11-12 從「Vocablearn」改名，更早叫「語言學習」；GitHub repo 名稱還是 `Vocablearn`）。
+- 已完成的語言：**日語 N5**（index.html）、**義大利文 A1**（it.html）、**西班牙文 A1**（es.html）、**德文 A1**（de.html）、**俄文 A1**（ru.html）、**英文 B2**（en.html）。
+- 選單裡的語言全部都能用了。
+- 介面是繁體中文，外觀、音效、震動、每輪題數、單字意思、介面語言這些設定，各語言共用。
+
+## 怎麼改（重要）
+
+- **所有頁面（包括日文頁 index.html）都是 `n5src/build.js` 產生的**，不要直接改網站上的 .html。改 `n5src` 裡的原始檔，然後：
+  1. `node n5src/build.js n5work`（產生全部頁面；只做某幾頁：`node n5src/build.js n5work ja it`）
+  2. 跑測試：`node n5src/test-all.js n5work`（五個語言、core.js、sync.js 全部）
+  3. `node n5src/build.js n5work --check`：確認網站上的檔案和原始檔一致（有人直接改了 .html 時會列出來）
+  4. 把 n5src 和 n5work 重新打包成 n5-src.zip，連同改過的網站檔案一起 commit。
+- 網站上的檔案全部平放在 repo 根目錄（GitHub Pages）。原始碼在 repo 根目錄的 `n5-src.zip`（使用者用 iPad 的 GitHub 網頁版上傳時不能上傳資料夾，所以原始碼用 zip 放）。
+- 2026-11 起 Claude 可以直接 commit／push 到 `chouhug/Vocablearn` 的 main（使用者要求的）；推完要用 `git ls-remote` 確認 main 真的是新的 commit，並看 GitHub Pages 有沒有部署成功。
+- **GitHub Actions**（`.github/workflows/site.yml`「檢查並更新網站」）：每次推到 main 都會解開 n5-src.zip、跑 test-all.js、用 n5src/deploy.js 產生頁面並和網站檔案比對：
+  - 一樣 → 不動作（Claude 同時改了 zip 和網站檔案時）。
+  - 這次有改 zip、網站檔案不一樣 → 把 zip 產生的檔案複製到根目錄、sw.js 快取版本號加一、用 n5src/pack.py 重新打包 zip（中文檔名用 UTF-8）、commit「自動更新網站：…」、請 GitHub Pages 部署。
+  - 這次沒改 zip、網站檔案卻不一樣 → 失敗並列出檔案（有人直接改了網站檔案；不會蓋掉）。
+  - 測試沒過 → 失敗，不更新。
+  - Actions 頁面手動「Run workflow」→ 一律用 zip 更新網站。
+  - 所以**使用者從 iPad 只要上傳新的 n5-src.zip** 就好，網站會自動更新。
+
+## 網站上的檔案（repo 根目錄）
+
+| 檔案 | 說明 |
+|---|---|
+| index.html | 日語 N5 頁（build.js 用 n5src/ja/ 產生，約 430KB），開頭有 `<script src="lang.js" data-lang="ja">` |
+| it.html / es.html / de.html / ru.html / en.html | 由 build.js 產生的義大利文、西班牙文、德文、俄文、英文頁 |
+| lang.js | 所有頁共用：第一次使用先選語言、語言選單、語言鎖定（最多幾個語言＋自己寫的理由）、記住上次的語言並自動跳轉、換頁用 location.replace（返回鍵不會跳回上個語言）、鍵盤收起時恢復底部分頁、`html{touch-action:manipulation}`（防止連點放大） |
+| core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
+| ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
+| sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v106'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
+| icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
+
+## 原始碼（n5-src.zip 解開後）
+
+```
+n5src/
+  build.js            產生所有頁面：node build.js <輸出資料夾> [ja it es de ru en]；加 --check 只檢查不寫檔
+  base.css            所有頁共用的版面和顏色（原本在 index.html 的 <style>）
+  shared/             日文頁和語言頁共用的分頁程式（見下面「共用分頁程式」）
+  ja/                 日文頁：page.html（HTML 樣板，/*BASESTYLE*/ /*DATA*/ /*APP*/ 由 build.js 填入；Firebase 設定也寫在這裡）
+                      第一個 <script>（依序接起來）：kana.js 五十音、vocab1.js 單字、grammar-points.js 文法點、
+                        engine.js 核心邏輯（斷詞、假名、變化形、句型例句…）、vocab-en.js 英文意思、vocab2.js 第二批單字、
+                        i18n.js 英文介面對照和例句翻譯
+                      第二個 <script>（依序接起來，是一個大函式）：app.js App 本體、gx-data.js 文法範例和練習題（JA_GX、JA_GX_PATH、JA_GX_ADD）、
+                        app-end.js 文法頁和初始化。共用程式用 // @include shared/… 和 // @end 標出位置，中間由 build.js 填
+  lang-template.html  語言頁的 HTML 樣板
+  lang-app.js         語言頁的共用程式（約 1450 行），用 window.LANGCFG（設定）和 window.LX（各語言引擎與資料）
+  lang-style.css      語言頁額外的樣式
+  it/  義大利文：config、engine、data1–5、grammar、quiz、gx1–2、gxpath、test
+  es/  西班牙文：config、engine、data1–5、grammar、quiz、gx1–2、gxpath、test
+  de/  德文：config、engine、data1–5、grammar、quiz、gx1–2、gxpath、test
+  en/  英文：config、engine、data1–5、basic（例句用到的基本字，只供點字查詢）、grammar、quiz、gx1–2、gxpath、test
+  ru/  俄文：config、engine、data1–5、grammar、quiz、gx1–3（文法範例拆解和練習題）、gxpath（文法關卡順序）、test，另有 stress.js（把單字的大寫母音換成重音符號）
+n5work/               目前網站上的所有檔案（build.js 的輸出）
+```
+
+- 日文頁和語言頁都用 base.css，Firebase 設定從 ja/page.html 拿，所以外觀和帳號完全一致。
+- **共用分頁程式**（`n5src/shared/*.js`）：需要用到頁面自己變數的共用程式（例如單字庫分頁）放這裡。build.js 把它複製進：
+  - lang-app.js 的 `/*@include shared/檔名*/` 位置（產生語言頁時）
+  - ja/app.js、ja/app-end.js 的 `// @include shared/檔名` 和 `// @end shared/檔名` 中間（產生日文頁時）
+  所以**這些段落不要直接在產生出來的 .html 改**，改 shared 的檔再跑 build.js。各頁不一樣的地方放在頁面的 `PAGE` 物件（`PAGE.lib` 是單字庫的掛勾，說明在 lib-tab.js 開頭）。
+  - `shared/lib-tab.js`：單字庫＋設定分頁（libCounts、renderLib、fillList、entryBtn、libList）。搜尋 doSearch 兩邊差太多，還是各自的。
+  - `shared/card-tab.js`：字卡分頁（deck、CARD_SRCS、renderCard、showFlash、updateCardCounts）。卡片上各頁不同的部分在 `PAGE.card`（詞性、文法按鈕和說明、單字那一行、變化形）；語言頁的 formsLine 留在 lang-app.js。
+  - `shared/fill-tab.js`：填空分頁的流程（fillRound、FILL_SRCS、renderFill、nextFillQ、scrollFillTop）：選題、送出、判斷、記錄、音效、下一題、手機鍵盤。題目本身由 `PAGE.fill.make(w, R)` 產生（日文：振り仮名、羅馬拼音、假名即時轉換、checkFill；語言頁：answerSpan、重音提醒 markDiff、同義字 synonymOf、答完念例句）。日文的聽寫（renderDict、nextDictQ）還在 index.html，用 `PAGE.fill.alt()` 切過去。
+  - `shared/mc-tab.js`：單選分頁的回合管理（mcRound、MC_SRCS、renderMC、nextMCQ）、三種基本題型（看單字選意思、看意思選單字、聽發音選意思），和 emptyWords（沒有題目時的提示，單選、填空、聽寫共用）。一輪的設定用 `PAGE.mc.roundKey()` 判斷（設定變了就重新出題）。特殊題型留在各頁：日文的漢字讀音（nextReadQ）、助詞（nextPartQ）、詞性變化（nextConjQ），語言頁的冠詞／格與性別、介係詞練習句、動詞變化（在 PAGE.mc.question 和 special 裡）。日文頁換日→中／中→日／聽→中會接著同一輪（resetOnMode: false），語言頁換題型會重新出題。
+  - `shared/gram-tab.js`：文法關卡（gxKey、gxNeed、gxStages、gxNext、gxRecord、gxPathHTML、gxWhere）、練習題流程（startGxQuiz）、文法點頁（renderGramPoint：說明／看範例／練習題、例句卡片）、openGram 和 data-gram 的點擊。文法列表、變化規則頁、範例拆解（gxExamplesHTML）還是各頁自己的；一題練習題怎麼畫在 `PAGE.gram.quizQ`。gramPane、gramPaneId、gramShow 由各頁宣告。
+  - `shared/sheet.js`：拉起式面板 Sheet（open、close、isOpen）。
+  - `shared/dict.js`：線上查字典（給 mine.js 的表單用）。
+  - `shared/mine.js`：「我的單字」的新增／編輯表單（editMine）。頁面有 `PAGE.mine` 才會出現入口（prefix、lang、name、posOpts、builtin、check、changed）。語言頁和日文頁都有。
+  - `shared/tour.js`：首次使用導覽（Tour），各頁的步驟和文字在 `PAGE.tour`。
+  - `shared/voice.js`：Voice（讀語音、挑聲音、念）和設定裡的語音區 renderVoiceBox。各語言怎麼挑聲音在 `PAGE.voice`（日文會避開 Ichiro、Haruka 這類很機械的舊語音；語言頁看語言代碼、Google 語音和 config.js 的 voiceNames）。`Voice.speak(text, voiceOverride, rate)`。
+- 每個語言有自己的背景插畫（義大利：絲柏、托斯卡尼小鎮；西班牙：風車、橄欖樹；德國：阿爾卑斯雪山、城堡、桁架屋、冷杉；俄羅斯：洋蔥頂教堂、白樺樹、木屋；英文：鐘樓、拱橋、雙層巴士）。
+- 測試：`node n5src/it/test.js`（21061 項）、`node n5src/es/test.js`（20974 項）、`node n5src/de/test.js`（31429 項）、`node n5src/ru/test.js`（32586 項）、`node n5src/en/test.js`（19897 項），目前全部通過。
+- 單字格式：`[單字, 詞性, 性別, 複數或變化, 中文, 英文, 例句, 例句中文, 填空答案]`。
+- 德文的差異：
+  - 名詞性別 m／f／n／pl（只有複數，如 Eltern），名詞一律大寫。弱變化名詞（Herr → Herrn）列在 engine.js 的 `WEAK`。
+  - 動詞第 4 欄是規格 `key=value;…`：`pp`（過去分詞）、`aux=sein`、`sep`（分離前綴）、`du`（母音變化，er 自動推算）、`er`、`imp`、`nopast`、`noimp`。詞性 v／v-st／v-irr／v-mod；反身動詞寫成 `sich freuen`。
+  - 形容詞第 4 欄：`cmp`、`sup`（不含 am）、`att`（名詞前詞幹，如 hoch → hoh）、`nocmp`、`inv`、`pred`。
+  - 冠詞題分兩種：只看名詞選 der／die／das（性別題），或從例句挖冠詞（含格的說明，例如「den：Tisch 是陽性單數，這裡是受格」）。雙向介係詞後面不會出另一個格的干擾選項。
+  - 填空：變音可以打 ae／oe／ue／ss，算「對但注意拼寫」；名詞小寫開頭也會提醒。
+- 俄文的差異：
+  - 單字第一欄（原形）有重音符號 U+0301（кни́га），例句和答案不加；比對、查詢、搜尋都會去掉重音、把 ё 當 е（填空 ё 寫成 е 也算對；手機鍵盤長按打出的 á、é 這類拉丁重音字母，或誤打成長得一樣的拉丁字母 a、o、p、c，也都當成俄文字母）。沒重音的 о／а、е／и／я 拼錯算「答對但注意拼寫」（checkAnswer 回傳 accent），拼寫提醒會在正確寫法裡把不一樣的字母畫底線（lang-app.js 的 `markDiff`，各語言都適用）。新增單字時第一欄可以用大寫母音標重音（кнИга），再跑 `node n5src/ru/stress.js` 轉換；專有名詞前面加 ! 並直接寫 \u0301。
+  - 名詞第 4 欄是規格：`anim`（有生命）、`gen=`（單數屬格，處理母音脫落 отец → отца）、`pl=`、`gpl=`（複數屬格；子音＋к 結尾一定要寫）、`es`（重音在詞尾，影響 ж ш щ ч ц 後的 о／е 和 ё）、`loc=`（в саду）、`indecl`、`nopl`、`adj`（照形容詞變化：столовая、мороженое）、`sg=`／`plf=`／`ipl=`（整組或個別指定）。名詞自動算出六個格、單複數。
+  - 動詞詞性 v1（第一變位）、v2（第二變位）、v-irr。規格：`p=я,ты`（其他人稱自動推出）、`pres=`、`pf`（完成體，變位顯示成將來式）、`pair=`、`past=`、`imp=`、`noimp`、`fut`、`motion=uni／multi`；-ся 動詞的覆寫不寫 -ся。過去式依性別分 4 個形。
+  - 形容詞自動處理硬、軟、г к х 後、ж ш щ ч 後和重音在詞尾（-ой）；`cmp=` 或 `nocmp` 必寫；`pred;short=` 是只有短尾形的字（рад、должен、занят）。代名詞、мой、этот、весь、один、третий 等的變格表在 engine.js 的 PRON、DET。
+  - 「單選」的第五種題型叫「格與性別」：從例句挖一個名詞選正確的格（介係詞能決定的格不會出成干擾選項），或用 мой／моя／моё 考名詞性別；範圍裡挖不出來時改出 PREP_DRILLS（介係詞與格）。
+  - 字母分五組：長得像英文、假朋友、新的子音、其他母音、符號。
+- 英文的差異（B2，給已經 B1 的人）：
+  - 沒有名詞性別（`LX.GENDER = {}`）：App 不顯示性別、拿掉上方「名」按鈕。單字第 3 欄一律 `-`。
+  - 詞性 n、v、v-ph（片語動詞）、adj、adv、conj、prep、pron、expr（片語、搭配）。片語動詞用第一個字變化（give up → gave up），`sep` 表示可以拆開。
+  - 第 6 欄是英英解釋：單字意思選 English 就會顯示。
+  - 動詞規格 `past=`、`pp=`、`dbl`；常見不規則動詞在 engine.js 的 `IRR`（也給基本字用）。名詞 `pl=`、`unc`（不可數）；形容詞 `cmp=`、`more`、`dbl`、`nocmp`。單字頁的動詞變化用表格（`LX.VERB_TABLE`）：原形、第三人稱單數、過去式、過去分詞、-ing。
+  - 以美式拼法為主；填空寫英式拼法（colour、realise、cancelled）也算對。例句可以有縮寫（don't），斷詞把縮寫和連字號的字當一個字。
+  - basic.js 是例句裡用到、但不在 B2 單字表裡的基本字（the、go、weather…），只供點字查詢，不出題。測試會檢查例句裡每個字都查得到。
+  - 單選第五種題型「介係詞與搭配」只出人工挑選的練習句（`LX.DRILLS_ONLY`），不看題目來源。動詞題問過去式、過去分詞、第三人稱單數或 -ing，干擾選項有規則化的錯誤（stealed）。
+  - 發音頁的「字母」改成 32 個音標（`LANGCFG.letterAsIs`、`letterTitle`、`letterNameLabel`），規則是重音、弱讀、-ed／-s 的唸法、連音等。
+- lang-app.js 新增的掛勾（語言包有提供才用，義、西不受影響）：`LX.GENDER`、`LX.formsTable`（單字頁變化表）、`LX.demoTable`（規則頁示範表）、冠詞題的 `info`、`checkAnswer` 第三個參數、`LANGCFG.accentNote`。
+- 俄文加的掛勾（同樣不影響其他語言）：`LANGCFG.pastPersons`／`sayPast`（過去式表的人稱）、`conjugate().presTab`（完成體的分頁顯示「將來式」）、動詞題的 `label`、`LANGCFG.gramPh`（文法搜尋框提示）、formsTable 也用在代名詞等非動詞、填空提示的字母數支援所有文字（\p{L}）、很長的字（超過 10、14 個字母）字卡字級縮小。（it、es、de 三頁已用新版 lang-app.js 重建。）
+
+## 資料與同步
+
+- 進度存在 localStorage `n5:progress`，Google 登入後同步到 Firestore（程式在 sync.js）：
+  - `users/{uid}`：`days`（每天題數）、`dv`（每台裝置每天的題數）、`v: 2`、`updated`。
+  - `users/{uid}/p/{語言}-{0~3}`：該語言的單字紀錄 `items`。每個語言分 4 份（id 的 FNV 雜湊 % 4；日文和沒有語言前綴的 id 放 `ja-*`），一份大約只有幾十 KB，離 1 MB 上限很遠。
+  - 每次只寫有改到的字（`batch.set(..., { mergeFields: [FieldPath('items', id)] })`，整筆換掉），不再先 get 再整份 set。
+  - 舊格式（v1，所有紀錄放在 `users/{uid}.items`）：新版連上時會把它收進分開的文件，再刪掉 `items`；舊版頁面之後又寫回來，也會再搬一次。
+  - Firestore 規則如果不允許讀寫 `users/{uid}/p/…`，會自動退回舊的整份格式（console 會出現 `[sync]` 警告）。需要的規則：`match /users/{uid}/{document=**} { allow read, write: if request.auth != null && request.auth.uid == uid; }`（rules_version = '2'）。
+  - 測試：sync 的模擬測試在 n5src/sync-test.js（`node n5src/sync-test.js ../n5work/sync.js`）。
+- 各語言的 id 有前綴（`it:`、`es:`），日語沒有前綴。
+- 設定在 `n5:settings`（共用），語言頁自己的語音設定在 `it:settings`、`es:settings`。
+- 語言鎖定設定在 `langs:v1`，上次使用的語言在 `langs:last`。第一次使用時 lang.js 會建立 `langs:v1`：新使用者只開目前這個語言；已經有 `langs:last` 或學習紀錄的人維持以前的預設（日語＋義大利文）。
+- 每日題數：`SyncDays`（sync.js）。每台裝置有自己的代號 `n5:dev`，`S.dv[日期][裝置]` 各記各的，`S.days[日期]`＝各裝置加總（和舊數字取大），兩台裝置同一天練不會再算少。`bumpDay()` 用 `SyncDays.bump`，並且會 `Cloud.schedule()`（以前只有題數變動時不會同步）。
+- 複習間隔：1／3／7／14／30／60 天（7 天以上加 ±15% 隨機，避免同一天到期的字擠在一起）。只有填空答對才算「學會」。學會的字答錯降兩級（不是打回第一級）。
+- 錯題（`w[mode]`）：1＝錯題、2＝以前錯過。答錯 → 1；在任何地方答對一次 → 2（離開錯題）；錯題複習答錯 → 回到 1。錯題複習（w＝2）每輪 10 題，依 `rv[mode]`（上次在錯題複習出現的時間）由舊到新抽，同時間的隨機，所以抽過的要等其他字都出過才會再出現。
+- 到期複習每天有上限 `SET.dueCap`（預設 30，可選 10／20／30／50／不限，設定頁「練習」）。到期最久、等級最低的先出；今天做過的（`dd`＝今天）也算在上限內，沒做完的明天接著出。單字庫「今天到期」顯示的是今天要做的數量。
+- 「已經會了」的字分散在 3～10 天後才第一次複習（原本固定 3 天，一次標很多個會同一天全部到期）。
+- 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
+
+## 最近做過的改動
+
+- **App 改名 Langgern**（2026-11-12 使用者要求）：manifest.json 的 name／short_name、所有頁面的 `<title>` 和 apple-mobile-web-app-title、English 介面的標題（ja/i18n.js、lang-i18n.js）。原始檔在 ja/page.html、lang-template.html。manifest 的 `id` 沒動，已經裝到主畫面的 App 不會被當成新的 App；主畫面上的名字有些手機要重新加到主畫面才會換。GitHub repo 名稱和網址沒改。
+
+- **英文介面套用到所有語言頁**（2026-11-11，第一步：介面）：設定裡的「介面語言」選 English 會套用到整個 App（日文頁和義、西、德、俄、英頁一起換，換了會重新載入；別的分頁換了也會跟著重新載入）。
+  - 翻譯的程式從 ja/app.js 搬到 `n5src/shared/i18n.js`（trText、L、trNode、MutationObserver），兩種頁面共用；學的語言（`lang="ja"`、`lang="it"`…，或 class="ja"、data-noi18n、textarea）不會被翻。
+  - 對照表分三層：`n5src/i18n-ui.js`（原本 ja/i18n.js 前面的介面對照，兩種頁面都載入）、`n5src/lang-i18n.js`（語言頁才有的介面文字 LD 和含變數的句子 LR；LR 放在共用規則前面先比對，語言名稱用 NM 換）、各語言的 `<代碼>/i18n.js`（內容，見下一項）。ja/i18n.js 只剩日文頁的例句翻譯和五十音例字。
+  - 各語言的內容（文法說明、練習題、例句翻譯…）：`<代碼>/i18n.js` 用 `Object.assign(I18N.en.content, { 中文原文: English })`，英文介面時 lang-app.js 一開始用 `I18N.en.applyContent(LX, LANGCFG)` 整段換掉（單字的中文意思不換，意思看「單字意思」設定）。**有這個檔的語言才有英文內容；還沒有的語言，介面是英文、內容還是中文。**目前有英文內容的語言：義大利文（it）、西班牙文（es）、德文（de）、俄文（ru）、英文（en）。英文頁只換說明文字：逐字意思、例句翻譯、填空題和介係詞練習的中文提示刻意留中文（英翻英沒有意義，填空題的翻譯換成英文會直接洩漏答案），基本字的中文意思也不換。俄文的 RU.CASE_ZH、RU.G_ZH 刻意留中文（引擎用它們組查詢說明、出題時用 /格|原形/ 判斷），畫面上的字由 ru/i18n.js 的規則翻。
+  - 檢查方法：用 playwright 開英文介面、點過每個分頁和按鈕，看 `window.__i18nMiss`（沒有對照的中文）。
+
+- **拿掉「我的造句」**（全部語言，2026-11-11 使用者要求）：單字頁的造句區、日文頁的造句面板和所有「造句」按鈕（字卡、點字的小框、搜尋結果）、單字庫清單的「我的造句」都拿掉了；shared/sents.js、sents-e2e.js、sents-ja-e2e.js、相關樣式和 English 對照都刪掉。
+  - 以前寫過的句子還留在紀錄的 `u` 欄位（不刪使用者的資料，照樣跟著合併和同步，只是不顯示）；core-test.js 那兩項改成檢查舊資料不會弄丟。以後要做 AI 造句批改可以從這個欄位接回來。
+
+- **日文頁 English 介面補翻譯**：我的單字、查字典的文字（標題、欄位、按鈕、提示、錯誤訊息、toast）都加進 ja/i18n.js（D 對照表和 R 正規表示式，在「我的單字、查字典」那段）。English 介面下自動填意思時先用英文解釋（`PAGE.mine.meanEn`），英文解釋預設打開。單字庫上方的統計格子文字可以換行（英文的 Choice mistakes、Fill-in mistakes 原本會超出格子）。
+  - 檢查方法：`UI_EN=1 node n5src/mine-ja-e2e.js n5work` 用 English 介面跑同樣的流程，最後印出畫面上沒有對照的中文（MISS）。剩下的只有使用者自己填的中文意思、單字意思設定成中文時的意思，和含日文的字串，都是正常的。
+
+- **我的單字的表單變簡單**（全部語言）：一開始只露出「單字、意思」（日文單字有漢字時多一欄「讀音」）。打完單字（離開欄位或按 Enter）就自動查字典，第一個中文翻譯直接填進意思（沒有中文就填第一個英文解釋），日文連讀音也自動填；不對可以直接改，或點其他的意思換掉（第一次點是換掉自動填的，之後點是接在後面）。原本的「查字典」按鈕拿掉了，連不上時有「再查一次」。
+  - 例句、例句的中文、詞性、（日文）例句的讀法、例句裡的寫法都收在「更多」裡；編輯有例句或詞性的字時「更多」預設打開，錯誤訊息跟例句有關時也會自動打開。英文解釋預設收起來（沒有中文翻譯時才打開）。
+  - **例句裡的寫法不用填了**：存檔時例句裡找不到原形，就用 `PAGE.mine.guessForm` 猜。語言頁找開頭最像的字（共同字首至少 min(字長, max(2, 字長-3)) 個字母，whisker → whiskers、усы → усами）；日文頁取語幹（去掉後面的平假名）加上後面接的平假名，去掉結尾的です／助詞（食べる → 食べました）。猜了要能通過 check 才用，不然照舊提示。
+  - **日文的變化形不用填例句的讀法了**：`inflectedReading(word, reading, form)` 用單字的讀音推出變化形怎麼唸（剃る／そる → 剃ります／そります），所以填空、拼音作答都能用。推不出來（語幹不同）時才要求填例句的讀法。
+  - 日文讀音：`dictReading(word)`（shared/dict.js）抓英文版 Wiktionary 條目原始碼（`w/api.php?action=query&prop=revisions…&formatversion=2&origin=*`），在 ==Japanese== 那段找 `{{ja-pos|noun|ひげ}}`、`{{ja-noun|…}}`、`{{ja-verb|type=1|そる}}` 這類標籤裡的假名（拿掉 . - ^ 等記號）；日文頁再用 align() 確認對得上單字才填。**這個抓讀音的方法沒有用真的網路試過**（這次連不上 Wiktionary），格式是照 Wiktionary 的標籤慣例寫的；抓不到就留空讓使用者自己填，不會出錯。
+  - 測試：dict-test.js 加了讀音的 6 項；mine-e2e.js、mine-ja-e2e.js 改成新的流程（自動填、更多、自動找變化形、變化形用拼音答對）。
+
+- **日文頁的我的單字＋查字典**：日文頁（index.html）的單字庫也有「＋ 新增自己的單字」、清單「我的單字」、搜尋不到時的「查字典並把…加到我的單字」。
+  - 表單比語言頁多兩欄：**讀音**（假名；單字有漢字一定要填，全假名的字不用）和**例句的讀法**（整句用平假名，可以不填）；沒有詞性欄（日文的詞性會牽動變化表，自己的字一律是「我的單字」，沒有變化形，點詞性按鈕會直接開編輯）。
+  - 例句沒填讀法時：這個字本身照它的讀音標振り仮名，其他漢字照樣顯示但不標、拼音略過（seg 的 `r` 是空字串），這種字不出聽寫（`w.noR`）。字在例句裡有變化（剃る → 剃ります）而且有漢字時，一定要填例句的讀法，填空才知道答案怎麼唸。
+  - 程式：ja/app.js 的 `myWord(id, c)`（把定義變成和內建單字一樣的資料，內容有問題回傳 `{ err }`，表單的檢查也用它）、`syncMine()`、`PAGE.mine`（readings: true、dict: 'ja'）。id 是 `v:my:單字`（v: 開頭，點字的小框才認得）。自己的字不出助詞題、不進文法例句和文法補充。
+  - 為了讓日文頁能用表單，Sheet（拉起式面板）從 lang-app.js 搬到 `n5src/shared/sheet.js`，兩邊共用；`.sheet-body`、`.hl-warn` 的樣式在 base.css 也放了一份。mine.js 多了 `PAGE.mine.readings`、`posOpts` 可以不給。
+  - 測試：`node n5src/mine-ja-e2e.js n5work`（要 playwright 和 Chrome，字典用假的回應）。日文的線上字典還沒用真的網路查過（英、德、俄、義、西查過，用的是同一支程式）。
+
+- **線上查字典**（義、西、德、俄、英頁）：「新增自己的單字」表單的單字欄下面多了「查字典」。會列出中文翻譯（MyMemory，機器翻譯，可能不準）和英文解釋（英文版 Wiktionary，依詞性分），點一下就填進「意思」（已經有字就用「；」接在後面），詞性還沒選時照字典自動選。搜尋不到、點例句的字查不到時的按鈕改成「查字典並加到我的單字」，打開表單就自動查一次。
+  - 程式在 `n5src/shared/dict.js`（dictLookup、dictFetch、dictText、DICT_POS；不用頁面變數，只用 fetch），表單在 shared/mine.js；頁面設 `PAGE.mine.dict = 語言代碼` 才有。
+  - 用的服務（都不用金鑰、允許網頁直接連）：`https://en.wiktionary.org/api/rest_v1/page/definition/<字>`（回傳依語言代碼分組，條目分大小寫，所以照打的、全小寫、首字大寫各試一次）和 `https://api.mymemory.translated.net/get?q=<字>&langpair=<語言>|zh-TW`（沒登記的免費額度每天約 5000 個字元）。只有按「查字典」時才會把那個字送出去；沒網路會顯示連不上，意思還是可以自己填。sw.js 不快取這些連線。
+  - 測試：`n5src/dict-test.js`（假的 fetch，已加進 test-all.js）；mine-e2e.js 用假的回應測表單。2026-11-11 在正式網站上用真的網路查過 en／de／ru／it／es 和片語（give up），都有結果。**這兩個服務哪天改格式或關掉，查字典就會查不到（不影響其他功能）**，到時候換 dict.js 裡的網址和解析就好。
+
+- **我的單字：自己新增單字**（義、西、德、俄、英頁；日文頁還沒做）：單字庫分頁多了「＋ 新增自己的單字」，搜尋不到、點例句的字查不到時也可以直接加。欄位：單字、意思、詞性（其他／名詞／動詞／形容詞，只用來篩選）、例句、例句裡的寫法（字在例句裡有變化時填，例如 whisker → whiskers）、例句的中文；只有單字和意思必填，沒有例句時填空直接考這個字。
+  - 存法：定義放在這個字的進度紀錄裡，`S.items['en:my:whisker'].c = { w, zh, p, s, sz, a }`，所以合併（mergeState）和 Google 同步（sync.js 整筆寫）都不用改。刪除＝換成沒有 `c` 的空白紀錄（帶時間），其他裝置同步後也會刪掉。**備份碼不包含定義**（只有進度）。
+  - lang-app.js 的 `syncMine()` 把 S 裡的定義放進 WORDS／WMAP／ORDER／ALL_IDS（詞性 `my`，`w.custom = true`），啟動、存檔、雲端或別的分頁合併進來（refreshPassive）時都會跑。自己的字不出冠詞題、動詞變化題，不進文法例句，也沒有變化表。
+  - 新增後直接是「待考」；單字頁有「編輯或刪除這個字」，單字庫的清單多一個「我的單字」。「清除學習紀錄」會留下自己新增的字（變回未學）。
+  - 測試：core-test.js、sync-test.js 各加了幾項；`node n5src/mine-e2e.js n5work`（要 playwright 和 Chrome，不在 test-all.js 裡）用手機寬度實際新增、作答、編輯、刪除。
+
+- **跳出面板時後面不能滑**（lang.js）：選單、單字詳細、切換語言、導覽、選語言這些面板開著時，`<html>` 加上 `lg-lock`（overflow:hidden），面板外的手指拖動也擋掉（iOS Safari 有時不理 overflow:hidden）；面板裡能捲動的區域（`.pk-list`、`.sheet-body`、導覽卡）照常捲，捲到頂／底也不會帶動後面。用 MutationObserver 看畫面上有沒有開著的面板（`.pk-back:not([hidden])`、`.tour-card:not([hidden])`、`.lg-welcome`），所以各頁的面板不用自己處理。點字跳出的小框（日文頁 .peek）不鎖。
+- **第一次使用的選語言改成整頁**（`.lg-welcome`）：完全蓋住 App，看不到後面的頁面。
+
+- **第一次使用先選語言**（lang.js）：全新的使用者（沒有 langs:v1、langs:last、n5:progress）不管打開哪一頁，都會先跳出不能關的「你想學哪個語言？」（`langs:welcome`＝1 表示還沒選，沒選就關掉下次會再問）。選了別的語言就換頁，選目前這頁就關掉面板；`langs:v1` 只開選的那個語言。初次導覽會等選完（`AppLangs.welcome`、`AppLangs.afterWelcome(fn)`，shared/tour.js 的 `Tour.auto()` 用它）。還沒選時日文頁不會自動跳到上次的語言。LANGS 多了 `desc`（選語言時的一句說明）。
+
+- **各語言的初次導覽**：導覽程式從日文頁抽成 n5src/shared/tour.js（日文頁用 `// @include`、語言頁用 `/*@include*/`），各頁不同的地方在 `PAGE.tour`（key、steps()、art、extra／bind、fresh()）。義、西、德、俄、英頁第一次打開（還沒有該語言的紀錄、也沒看過）會跳出 10 步導覽：歡迎、切換語言、發音、字卡、單選、填空、文法、單字庫・設定、上方按鈕、小提示；看過的紀錄存在 `it:toured`、`es:toured`…（日文還是 `n5:toured`），設定的「介面語言」區有「重看使用導覽」。各語言的說明可以在 config.js 用 `tourIntro`、`tourPron`、`tourFill` 覆寫（俄、英改了發音頁說明，各語言的填空寫了拼寫規則）；找不到元素的步驟自動略過（英文頁沒有「名」按鈕）。日文頁導覽多了「切換語言」一步（有英文翻譯），而且改成只看日文的紀錄（以前學過其他語言就不會跳出日文導覽）。
+
+- **GitHub Actions 實測**：模擬從 iPad 只上傳 n5-src.zip（只改了 zip 裡的這份交接文件），由 Action 自動更新網站上的這個檔案和快取版本。
+
+- **GitHub Actions 自動檢查和部署**：新增 .github/workflows/site.yml，以及 n5src/test-all.js（全部測試）、deploy.js（zip → 網站）、pack.py（打包 zip）。在本機用 git repo 模擬過：只上傳 zip → 自動更新 it.html 和快取版本並 commit，再跑一次判斷一致；直接改網站檔案 → 失敗不覆蓋；測試失敗 → 擋下。
+
+- **日文頁改由 build.js 產生（第二項完成）**：index.html 拆成 n5src/ja/（page.html 樣板＋10 個程式檔），版面樣式抽成 n5src/base.css 給所有頁共用。拆完重新產生的 6 個頁面和拆之前逐位元組相同；之後每頁最上面多一行「這個檔是 build.js 產生的」註解。build.js 新增 `--check`。
+
+- **日文頁和語言頁共用程式：第三階段之五（文法頁、語音）**：新增 n5src/shared/gram-tab.js、voice.js，第三階段完成。文法頁所有狀態和語音（用假的語音清單測：選到的聲音、念的內容、語言代碼、速度、設定）都和之前一樣。
+
+- **日文頁和語言頁共用程式：第三階段之四（單選）**：新增 n5src/shared/mc-tab.js。所有題型（日文 6 種、語言頁 5 種）、題目來源、存下的紀錄、念出的句子都和之前一樣。emptyWords 改用語言頁比較新的版本：日文頁「去字卡挑字」會從新的一疊開始，「最近學過」沒有字時不會再提詞性篩選（最近學過本來就不看詞性）。日文頁沒用到的 MC_MODES 拿掉了。
+
+- **日文頁和語言頁共用程式：第三階段之三（填空）**：新增 n5src/shared/fill-tab.js（答題流程共用，題目內容在 PAGE.fill）。兩邊畫面和行為都完全不變（用固定亂數逐步比對：作答、提示、答錯、看答案、錯題、一輪結束、同義字、重音提醒、日文聽寫切換、存下的紀錄、念出的句子）。
+
+- **日文頁和語言頁共用程式：第三階段之二（字卡）**：新增 n5src/shared/card-tab.js。日文頁字卡畫面完全不變；語言頁的錯題標籤多了 ✕ 小圖示、「剩 x · 共 y」多了給螢幕閱讀器的說明（和日文頁一致）。
+
+- **日文頁和語言頁共用程式：第三階段之一（單字庫＋設定）**：新增 n5src/shared/lib-tab.js 和 build.js 的 include 機制（index.html 也由 build.js 更新共用段落）。日文頁畫面完全不變（只多了搜尋框會記住上次輸入）；語言頁多了「已排除」清單（可以恢復）和「收起」音效試聽。日文頁也有 reloadShared（匯出、匯入前先合併別的分頁存的進度）。
+
+- **日文頁和語言頁共用程式：第二階段**（ui.js）：音效、震動、提示訊息、下拉選單面板、滑動開關、圖示、答對答錯標示從兩邊搬到 ui.js（約 13 KB × 2 → 一份）。用兩邊的聯集：日文頁的音效（多 tap）、語言頁的 verdict（多 warn）、語言頁的 esc（null 不會變成 "undefined"）、語言頁的滑動開關（aria-pressed 改變也會滑）。sfxKind 的選擇器合併。
+
+- **日文頁和語言頁共用程式：第一階段**（core.js）：作答規則、複習間隔、出題順序、合併、備份碼原本在 index.html 和 lang-app.js 各有一份，現在只有 core.js 一份（日文頁的版本是超集合：多了假名題的規則和備份碼的 kana 錯題）。順便加了 core-test.js（45 項）。各個 next…Q() 開頭加上 `if (!R || !host) return;`，避免自動跳下一題時範圍剛好被換掉而出錯。
+
+- **小修正一批**：index.html 的 `<title>`、字體連結搬回 `<head>`，拿掉 claude.ai 預覽留下的 meta；三個 Firebase 程式庫加 `defer`（不擋住畫面，sync.js 會等到 DOMContentLoaded 再連線）；manifest 加 `id`、圖示 any／maskable 分開；sw.js 快取加 apple-touch-icon；每日題數改成各裝置加總；只做五十音／詞性變化／文法練習時題數也會同步；新使用者第一次打開不會先被問要暫停哪個語言。
+
+- **雲端同步改成每個語言分開存**（sync.js）：原本所有語言擠在一份 Firestore 文件，約 5,000 個字就會碰到 1 MB 上限，而且每答幾題就整份下載再整份上傳。現在每個語言分 4 份文件、只寫有改到的字；舊資料自動搬家；規則不允許時退回舊格式。index.html 和 lang-app.js 原本各有一份幾乎一樣的 Cloud 程式，現在共用 sync.js。
+
+- **練習題的「看變化表」提示**（語言頁）：練習題上方有可展開的「不知道要用哪個？看變化表」，內容是那個文法點說明裡的所有表格（`gxHintHTML`），展開狀態在同一輪會記住。義大利文 stare 的說明補上變化表。
+- **動詞變化表標清楚**：義、西的人稱變化表（3 列 × 2 欄）改成 `table.conj`：上面有「一個人／好幾個人」，每格上面小字是人稱和中文（io 我），下面大字是動詞。德文 sein／haben／möchte 用 grammar.js 的 `CONJ()` 產生同樣的表；德、義、西、俄其他表格的人稱欄加上中文（`<span class="zg">`，換行小字）。
+- **文法練習題加量**：每個文法點從 3 題加到 6 題，追加的題目放在各語言的 `gx3.js`（日文是 n5src/ja/gx-data.js 的 `JA_GX_ADD`）。過關改成答對八成（`gxNeed`：6 題要對 5 題；少於 5 題時要全對）。test.js 檢查每點至少 6 題、題目不重複。
+- **文法關卡內容檢查**：前面關卡的範例和題目不能用到後面關卡才教的文法（例如第 1 關不能考過去式）。俄文、義大利文可以用 `grammarMatch` 自動找出用到後面文法的句子（腳本思路：每句跑一次所有文法點的 grammarMatch，比對關卡編號），會有不少誤判（Это 被算成 этот、固定說法），要人工看。已修掉俄文 25 句、義大利文 20 句、日文 15 句；義大利文的關卡順序也調整（否定、問句、Lei 移到現在式之後），日文把「を」和ます形放在第 2 關、其他助詞第 3 關。
+- **日文文法範例、練習題、關卡**（index.html）：做法和語言頁一樣，程式和資料在 n5src/ja/gx-data.js（`JA_GX`、`JA_GX_PATH`）。48 個文法點分成 9 關。範例句和題目都附讀音（漢字換成平假名、其他字照抄），用 `align()` 標振り仮名；題目的空格寫成 `___`，讀音也放 `___`，程式用 `|___|` 分段對齊。過關紀錄 id 是 `ja:gx:文法id`。CSS 在 n5src/base.css（`.gr-row{` 那行後面）。改資料後可以用 align 檢查每句讀音對得起來（讀音對不上時會退回沒有假名）。
+- **文法關卡**（所有語言）：文法頁預設「關卡（照順序學）」，可切回「分類」；搜尋時用分類顯示。俄文 58 個文法點分成 12 關、義大利文 43 個分成 10 關、西班牙文 45 個分成 11 關、德文 47 個分成 11 關、英文 39 個分成 8 關（各語言的 `gxpath.js` 的 `RU.GX_PATH = [[關卡名, 說明, [文法id...]]]`，test.js 檢查剛好包含每個文法點一次）。練習題全對＝過關，一關全過下一關才打開；沒打開的關卡收起來，可以「先偷看」，點進去一樣能看、能練。上方有「繼續學：下一個沒過關的文法」，過關後結果頁直接接「下一個」。過關紀錄存在 progress 的 items，id 是 `ru:gx:文法id`（`{s:'gx', b:最佳分數, n:題數, p:1}`），跟著雲端同步；清除該語言紀錄時一起清掉；匯入備份碼也會保留。
+- **文法範例拆解＋練習題**（所有語言）：英文的 gx 檔字串一律用雙引號（句子裡有撇號）。文法詳細頁標題下有「說明／看範例／練習題」三個分頁。看範例：每個文法點 1–2 句，整句可播放、可點字查詢，下面逐字拆開（每個字下面標中文），再一條一條用白話說明字尾為什麼這樣變，最後一句「白話」總結。練習題：每個文法點 3 題四選一填空，答完一定顯示整句和「為什麼」，不自動跳下一題；算進今日題數，不進錯題和複習。資料在 `ru/gx1.js`、`ru/gx2.js` 的 `RU.GX[文法id] = { ex: [[句子, 中文, [[字, 中文]...], [說明...], 白話]], q: [[題目含 ___, 答案, [錯的選項], 中文, 為什麼]] }`，58 個文法點全部都有；app 只要 `IT.GX[id]` 存在就顯示分頁，其他語言加同格式的檔案、放進 build.js 的檔案清單即可。test.js 會檢查每個文法點都有題、拆字都在句子裡、選項不重複。
+- **規則頁小標題**（義、西、德、俄、英）：規則頁把好幾個文法點的說明接在一起時，每段前面加上該文法點的標題（各語言 grammar.js 的 `gb`／義大利文的 `gbI`，樣式 `.gbody h3.gb-h`）。
+- **單選新題型「詞性變化」**（index.html）：看原形和要變的形（ます形、否定、過去、過去否定、て形、ない形、た形、〜たい；い形容詞加て形、副詞；な形容詞只考過去和否定），選出正確的變化。範圍可選動詞＋形容詞、動詞、一類／二類／三類、長得像二類的一類、形容詞。錯誤選項照常見錯法做（`conjWrong`）：分錯動詞類別、て形音便用錯、字尾換錯段、い／な形容詞弄混、くないでした、いい→いくない、来る的こます／きない。来る的選項一律顯示假名，避免漢字一樣看不出差別。答錯的題這一輪最後會再出一次；不影響「已學會」和錯題紀錄。答錯後顯示規則和「完整變化表」按鈕。
+- **日文振り仮名逐字標**（index.html）：漢字詞的假名對到每個字上（学生 → 学がく・生せい，学校 → 学がっ・校こう），音讀、訓讀都看得出來是哪個字的。`align()` 會在 seg 上加 `sub`（每個字的讀音），`rubyHTML` 依 `sub` 輸出。讀音表 `KYOMI` 來自 KANJIDIC2（CC BY-SA 4.0），只收 App 出現的 446 個字；處理連濁、促音和「々」。熟字訓（今日、明日、大人、時計…）拆不開就整個詞一起標；特殊拆法寫在 `FURI_FIX`。新增單字用到表裡沒有的漢字，那個詞會整個一起標，不會錯。
+- **英文 B2 語言包**：652 個字（名詞 184、動詞 159、片語動詞 63、形容詞 130、副詞與連接詞 85、片語 29）、39 個 B2 文法點（時態、假設語氣、被動、使役、間接引述、關係子句、情態動詞推測、動名詞與不定詞、比較、連接詞…）、6 頁變化規則、58 題介係詞與搭配練習、32 個音標。
+- **錯題與到期複習改版**（所有語言，含日文）：錯題答對一次就消掉；錯題複習改成從以前錯過的字輪流抽、不重複；到期複習每天有上限、最久沒複習的先出；答錯只降兩級；「已經會了」分散到期日。規則細節見「資料與同步」。
+- **填空填了同義字**（義、西、德、俄）：答案錯，但填的是另一個意思相同的單字（或它的變化形，用 `sameMeaning` 比中文或英文意思）時，不算錯，顯示「○○ 是「…」，意思很接近，但這題要的是另一個字」並打開提示，再給一次機會；第二次就照常判斷。程式在 lang-app.js 的 `synonymOf`。俄文打招呼的意思也寫清楚了（здравствуйте 正式、привет 朋友之間、добрый день 白天）。
+- **切換語言選單的進度條**：每個語言顯示「已學會 x%・已學會／全部 字」（全部不含已排除的字，跟單字庫的 % 一樣）。每一頁用 `AppLangs.stats(fn)` 登記算法（index.html 和 lang-app.js 都在 libCounts 後面），lang.js 在離開頁面、切到背景、打開選單時存到 localStorage `langs:stats`；目前這頁即時算，其他語言顯示上次打開時的數字，沒打開過的顯示「還沒開始」。
+- **名詞性別標示**（義、西、德、俄）：例句裡的名詞上方用 ruby 小字標出 陽／陰／中／複（顏色同詞性標籤），像日文頁的假名。上方新增「名」按鈕開關，設定存在共用的 `n5:settings` 的 `gender`（預設開）。只在這個字一定是名詞、性別只有一種時才標；德文要大寫開頭。「冠詞／格與性別」題目的題幹不標，避免洩漏答案。程式在 lang-app.js 的 `genOfToken`、`applyGen`。
+- **俄文語言包**：824 個字（名詞 340、動詞 175、形容詞 103）、58 個文法點、10 頁變化規則；名詞六格、形容詞與代名詞變格、動詞第一／第二變位、子音交替、-ся、過去式、完成體、運動動詞、命令式；單字標重音。
+- **德文語言包**：834 個字（名詞 360、動詞 172、形容詞 110）、47 個文法點、9 頁變化規則；名詞三格表、形容詞比較級與詞尾、動詞現在式／完成式（haben／sein）／命令式，含分離動詞、反身動詞、母音變化。
+- 西班牙文語言包：841 個字、45 個文法點、8 頁變化規則、完整動詞變化引擎（含詞幹變化、反身動詞命令式重音）。
+- 點字查詢面板改版：放大字、每個意思附例句。
+- 設定頁統一：三種語言分區一樣（發音、音效、練習、介面語言、單字意思、同步與備份）。
+- 日語填空：提示改成按了才顯示（設定可改回一開始就顯示）；接受漢字寫法，約 80 個平常寫假名的字（だれ→誰、おいしい→美味しい，動詞變化形也可以）。
+- sw.js 改成網路優先，上傳後重新打開就會更新。
+
+## 待辦和點子
+
+0. **日文頁和語言頁共用程式（接續第一階段）**：還有 57 個函式兩邊各一份、內容大同小異（renderMC、renderCard、renderFill、renderLib、Voice、Sfx、Picker、startGxQuiz、renderGram…），以及日文頁獨有的功能（五十音、振り仮名、詞性變化、聽寫、English 介面；導覽已共用）。建議順序：
+   - ~~第二階段：共用的介面零件搬進 ui.js~~（已完成；Voice 兩邊差比較多，留到第三階段）。
+   - 第三階段：分頁逐一合併到 n5src/shared/，差異放在 PAGE。~~單字庫＋設定~~、~~字卡~~、~~填空~~、~~單選~~、~~文法頁~~、~~語音~~（第三階段完成：shared/lib-tab.js、card-tab.js、fill-tab.js、mc-tab.js、gram-tab.js、voice.js）。
+   - 注意：「已排除」清單只會有 2026-10-26 以前在日文頁按「排除」的字（那天之後兩邊都沒有排除按鈕）。使用者還沒決定要把排除功能加回來，或在清單是 0 時把它藏起來。
+   - ~~最後：把 index.html 拆成 n5src/ja/，由 build.js 產生~~（已完成）。之後可以繼續把兩邊還重複的小工具（posChips、bindPos、progressLine、roundDone、renderChoice、點字查詢面板…）搬到 shared/。
+   每一步都要跑：五個語言的 test.js、core-test.js、sync-test.js，並在手機寬度實際點過日文頁和至少一個語言頁。
+
+1. **好友對戰**（使用者的點子）：用邀請碼加好友，從兩人都學會的字出題，先做非同步挑戰，再做即時對戰。只用邀請碼，不開放隨機配對陌生人和聊天。需要寫好 Firestore 安全規則。
+2. **通知**：定時推播需要 Firebase Blaze（要綁付款方式，需要家長協助）＋ Cloud Functions。比較簡單的替代：主畫面圖示顯示到期字數、App 內提醒。
+3. **假名筆順動畫**：可用 KanjiVG（CC BY-SA 3.0，要註明來源），可能需要使用者自己下載檔案，因為 Claude 的環境連不到 GitHub 原始檔。
+4. 義、西、德填空加特殊字母按鈕（à è é ñ ¿ ¡ ä ö ü ß）。
+5. 選單裡「準備中」的語言可以先藏起來（使用者看到會不舒服）。
+6. 義、西頁的英文介面（~~使用導覽~~ 已完成）。
+   英文可以再加：更多 B2 單字（目標 800 以上）、片語動詞的專門練習、寫作常用句型。
+7. 俄文可以再加：數字的變格（двух、пяти）、形容詞短尾形、更多動詞（運動動詞加前綴：прийти 以外的 выйти、войти）。
+8. 德文可以再加：屬格、形容詞受格／與格詞尾的專門練習題。
+
+## 使用者偏好
+
+- 用繁體中文溝通，回覆要直接、好讀。
+- 喜歡平面幾何風格的插畫，不喜歡典型 AI 生成圖。
+- 使用 iPad 和 Android 手機（三星）測試，畫面要在 360–412px 寬、淺色和深色主題都檢查。
+- 交付檔案時，說清楚要上傳哪幾個檔案。
