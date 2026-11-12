@@ -60,7 +60,7 @@ n5src/
   es/  西班牙文：config、engine、data1–5、grammar、quiz、gx1–2、gxpath、test
   de/  德文：config、engine、data1–5、grammar、quiz、gx1–2、gxpath、test
   en/  英文：config、engine、data1–5、basic（例句用到的基本字，只供點字查詢）、grammar、quiz、gx1–2、gxpath、test
-  ru/  俄文：config、engine、data1–5、grammar、quiz、gx1–3（文法範例拆解和練習題）、gxpath（文法關卡順序）、test，另有 stress.js（把單字的大寫母音換成重音符號）
+  ru/  俄文：config、engine、data1–5、grammar、quiz、cursive（手寫體筆畫）、gx1–3（文法範例拆解和練習題）、gxpath（文法關卡順序）、test，另有 stress.js（把單字的大寫母音換成重音符號）
 n5work/               目前網站上的所有檔案（build.js 的輸出）
 ```
 
@@ -127,6 +127,10 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **俄文字母加手寫體動畫**（2026-11-12）：發音 → 字母，點一個字母，面板裡多了「手寫體（俄國人平常寫的字）」：大寫、小寫的連筆手寫體（пропись）一筆一筆畫出來，有四條練字線（頂線、中線、基線、下線），點一下重播；系統設定「減少動態效果」時直接畫好。容易認錯的字有說明（т 手寫像 m、и 像 u、д 像 g、п 像 n…）。ъ、ы、ь 只有小寫。
+  - 筆畫資料在 `n5src/ru/cursive.js`（`RU.CURSIVE`：字 → [寬度, 每一筆的 SVG path]；`RU.CURSIVE_NOTE`：小寫 → 說明），是 Claude 手畫的座標（沒有傾斜，畫的時候整個字往右斜 15°），座標說明在檔案開頭。英文介面的說明在 ru/i18n.js 最後。
+  - 程式在 lang-app.js 的 cursiveSVG、cursiveHTML、playCursive（openLetter 會呼叫）；其他語言沒有 `IT.CURSIVE` 就不會出現。樣式在 lang-style.css 的 `.cursv`、`.cstroke`。測試在 ru/test.js（每個字母都有、path 格式）。
 
 - **五十音表最上面加「一個一個學」＋筆順動畫**（2026-11-12）：照表的順序（清音 → 濁音・半濁音 → 拗音，平假名、片假名各 104 個）一次看一個假名，有「上一個假名／下一個假名」、進度條、發音、例字、容易混淆的字；最後一個變成「去練習」。進入下一個分類時下面的表格會跟著切換；點表格裡的字也會跳到那個字（取代原本點字時出現的說明卡）。位置記在 `UI.kanaPos`（h／k 各一個 id，存在 `n5:ui`）。
   - 筆順資料在 `n5src/ja/kana-strokes.js`（`KANA_STROKES`：假名 → 每一筆的 SVG path，約 35 KB），從 KanjiVG 的 kanji/030xx.svg 轉出（Claude 用 git 稀疏 clone `KanjiVG/kanjivg` 拿到）。授權 CC BY-SA 3.0，卡片下方有註明來源，不要拿掉。
