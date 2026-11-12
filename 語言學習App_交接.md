@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v106'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v109'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -48,7 +48,7 @@ n5src/
   base.css            所有頁共用的版面和顏色（原本在 index.html 的 <style>）
   shared/             日文頁和語言頁共用的分頁程式（見下面「共用分頁程式」）
   ja/                 日文頁：page.html（HTML 樣板，/*BASESTYLE*/ /*DATA*/ /*APP*/ 由 build.js 填入；Firebase 設定也寫在這裡）
-                      第一個 <script>（依序接起來）：kana.js 五十音、vocab1.js 單字、grammar-points.js 文法點、
+                      第一個 <script>（依序接起來）：kana.js 五十音、kana-strokes.js 假名筆順（KanjiVG）、vocab1.js 單字、grammar-points.js 文法點、
                         engine.js 核心邏輯（斷詞、假名、變化形、句型例句…）、vocab-en.js 英文意思、vocab2.js 第二批單字、
                         i18n.js 英文介面對照和例句翻譯
                       第二個 <script>（依序接起來，是一個大函式）：app.js App 本體、gx-data.js 文法範例和練習題（JA_GX、JA_GX_PATH、JA_GX_ADD）、
@@ -128,6 +128,9 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **五十音表最上面加「一個一個學」＋筆順動畫**（2026-11-12）：照表的順序（清音 → 濁音・半濁音 → 拗音，平假名、片假名各 104 個）一次看一個假名，有「上一個假名／下一個假名」、進度條、發音、例字、容易混淆的字；最後一個變成「去練習」。進入下一個分類時下面的表格會跟著切換；點表格裡的字也會跳到那個字（取代原本點字時出現的說明卡）。位置記在 `UI.kanaPos`（h／k 各一個 id，存在 `n5:ui`）。
+  - 筆順資料在 `n5src/ja/kana-strokes.js`（`KANA_STROKES`：假名 → 每一筆的 SVG path，約 35 KB），從 KanjiVG 的 kanji/030xx.svg 轉出（Claude 用 git 稀疏 clone `KanjiVG/kanjivg` 拿到）。授權 CC BY-SA 3.0，卡片下方有註明來源，不要拿掉。
+  - 動畫：`playStrokes` 用 Web Animations 一筆一筆畫（stroke-dashoffset），每一筆起點標數字；點練字格或「重播筆順」重播；系統設定「減少動態效果」時直接畫好。程式在 ja/app.js（renderKanaStep、stepKana），樣式在 base.css 的 `.kstep`、`.kstroke`。
 - **App 改名 Langgern**（2026-11-12 使用者要求）：manifest.json 的 name／short_name、所有頁面的 `<title>` 和 apple-mobile-web-app-title、English 介面的標題（ja/i18n.js、lang-i18n.js）。原始檔在 ja/page.html、lang-template.html。manifest 的 `id` 沒動，已經裝到主畫面的 App 不會被當成新的 App；主畫面上的名字有些手機要重新加到主畫面才會換。GitHub repo 名稱和網址沒改。
   - 那次的 zip 是在 Windows 用 pack.py 打包的，檔案被標成 Windows 系統（create_system 0），Actions 的 unzip 把中文檔名解成亂碼，多出一個亂碼檔名的交接文件。已修：pack.py 一律標成 Unix（create_system 3），並刪掉亂碼檔。**在 Windows 打包一定要用新版 pack.py**（不要用 Windows 內建的壓縮）。
 
@@ -233,7 +236,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 1. **好友對戰**（使用者的點子）：用邀請碼加好友，從兩人都學會的字出題，先做非同步挑戰，再做即時對戰。只用邀請碼，不開放隨機配對陌生人和聊天。需要寫好 Firestore 安全規則。
 2. **通知**：定時推播需要 Firebase Blaze（要綁付款方式，需要家長協助）＋ Cloud Functions。比較簡單的替代：主畫面圖示顯示到期字數、App 內提醒。
-3. **假名筆順動畫**：可用 KanjiVG（CC BY-SA 3.0，要註明來源），可能需要使用者自己下載檔案，因為 Claude 的環境連不到 GitHub 原始檔。
+3. ~~假名筆順動畫~~（已完成，見「最近做過的改動」）。之後可以考慮：在「練習」加描寫題。
 4. 義、西、德填空加特殊字母按鈕（à è é ñ ¿ ¡ ä ö ü ß）。
 5. 選單裡「準備中」的語言可以先藏起來（使用者看到會不舒服）。
 6. 義、西頁的英文介面（~~使用導覽~~ 已完成）。
