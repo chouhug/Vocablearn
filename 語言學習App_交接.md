@@ -4,7 +4,7 @@
 
 ## 專案是什麼
 
-- 原本是日語 N5 學習 PWA（GitHub：`chouhug/Vocablearn`，用 GitHub Pages 發布），現在擴充成多語言學習 App，名稱「Vocablearn」（原「語言學習」）。
+- 原本是日語 N5 學習 PWA（GitHub：`chouhug/Vocablearn`，用 GitHub Pages 發布），現在擴充成多語言學習 App，名稱「Langgern」（2026-11-12 從「Vocablearn」改名，更早叫「語言學習」；GitHub repo 名稱還是 `Vocablearn`）。
 - 已完成的語言：**日語 N5**（index.html）、**義大利文 A1**（it.html）、**西班牙文 A1**（es.html）、**德文 A1**（de.html）、**俄文 A1**（ru.html）、**英文 B2**（en.html）。
 - 選單裡的語言全部都能用了。
 - 介面是繁體中文，外觀、音效、震動、每輪題數、單字意思、介面語言這些設定，各語言共用。
@@ -37,7 +37,7 @@
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
 | sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v106'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
-| manifest.json | 名稱「Vocablearn」（原「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
+| manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
 ## 原始碼（n5-src.zip 解開後）
@@ -127,6 +127,8 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **App 改名 Langgern**（2026-11-12 使用者要求）：manifest.json 的 name／short_name、所有頁面的 `<title>` 和 apple-mobile-web-app-title、English 介面的標題（ja/i18n.js、lang-i18n.js）。原始檔在 ja/page.html、lang-template.html。manifest 的 `id` 沒動，已經裝到主畫面的 App 不會被當成新的 App；主畫面上的名字有些手機要重新加到主畫面才會換。GitHub repo 名稱和網址沒改。
 
 - **英文介面套用到所有語言頁**（2026-11-11，第一步：介面）：設定裡的「介面語言」選 English 會套用到整個 App（日文頁和義、西、德、俄、英頁一起換，換了會重新載入；別的分頁換了也會跟著重新載入）。
   - 翻譯的程式從 ja/app.js 搬到 `n5src/shared/i18n.js`（trText、L、trNode、MutationObserver），兩種頁面共用；學的語言（`lang="ja"`、`lang="it"`…，或 class="ja"、data-noi18n、textarea）不會被翻。
