@@ -4106,10 +4106,44 @@ const D = {
 '「例句的讀法」和例句對不起來。請把整句用平假名寫一次（片假名和標點照原樣），或先留空。': '“Sentence reading” doesn’t match the sentence. Write the whole sentence in hiragana (keep katakana and punctuation as they are), or leave it empty.',
 '專有名詞': 'Proper noun', '介係詞': 'Preposition', '代名詞': 'Pronoun', '連接詞': 'Conjunction', '感嘆詞': 'Interjection', '限定詞': 'Determiner', '冠詞': 'Article', '數詞': 'Numeral',
 '片語': 'Phrase', '慣用語': 'Idiom', '介係詞片語': 'Prepositional phrase', '諺語': 'Proverb',
+// ---- 文法關卡、範例、練習題（shared/gram-tab.js；日文頁和語言頁共用）----
+'文法關卡': 'Grammar stages', '全部過關了！': 'All stages cleared!', '過關！': 'Passed!', '已過關': 'Passed', '全對，': 'Perfect! ',
+'這個文法你會了。': 'You’ve got this grammar point.', '差一點，看一下範例再練一次。': 'Almost — look at the examples and try again.',
+'先看範例拆解，再回來試試。': 'Look at the example breakdowns first, then try again.', '再練一次': 'Try again', '看範例': 'Examples', '看範例拆解': 'See example breakdowns',
+'文法練習': 'Grammar practice', '文法分頁': 'Grammar sections', '說明': 'Explanation', '練習題': 'Practice', '文法列表': 'Grammar list', '‹ 文法列表': '‹ Grammar list',
+'照順序學，後面的文法會用到前面的。每個文法點看完說明和範例，練習題答對八成就過關（6 題要對 5 題）；一關全部過關，下一關就會打開。': 'Learn in order — later points build on earlier ones. Read each point’s explanation and examples; get 80% of the practice right to pass (5 of 6). Clear a whole stage to unlock the next.',
+'全部關卡都過了': 'all stages cleared',
+'文法排列': 'Grammar view', '關卡（照順序學）': 'Stages (in order)', '分類': 'By topic', '實際變化例子': 'Real examples',
+'找不到符合的文法。': 'No matching grammar.', '搜尋文法': 'Search grammar',
+'上面是整句，中間每個字下面是它的中文，最後一條一條說明為什麼這樣排。點句子裡的字可以查意思。': 'The whole sentence is on top, each word’s meaning is under it, and the notes explain why it’s put together that way. Tap any word to look it up.',
+'白話': 'In plain words', '為什麼：': 'Why: ', '不知道要用哪個？看變化表': 'Not sure which one? See the forms table',
+'黃色是這個文法點，點任何一個字可以查意思。': 'This grammar point is highlighted in yellow. Tap any word to look it up.',
+'目前的例句裡還沒有用到這個文法。': 'None of the example sentences use this grammar yet.', '出自單字：': 'From the word: ',
+'播放範例': 'Play example', '播放整句': 'Play sentence', '範例': 'Example',
 };
 const re = [];
 const t = s => I18N.en.dict[s] ?? s;
 const R = (r, f) => re.push([r, f]);
+const tc = s => I18N.en.content[s] ?? I18N.en.dict[s] ?? s;   // 文法關卡名稱這類內容：先找 content 再找 dict
+// 文法關卡（shared/gram-tab.js；日文頁和語言頁共用）
+R(/^第 (\d+) 關・(.+)$/, (m, n, x) => `Stage ${n} · ${tc(x)}`);
+R(/^繼續學：(.+)$/, (m, x) => `Continue: ${tc(x)}`);
+R(/^下一個：(.+)$/, (m, x) => `Next: ${tc(x)}`);
+R(/^已過關 (\d+) \/ (\d+)$/, 'Passed $1 / $2');
+R(/^完成上一關就會打開・先偷看這關的 (\d+) 個文法$/, 'Opens when you finish the previous stage · peek at its $1 grammar points');
+R(/^練習題答對 (\d+) 題就過關$/, 'Get $1 right to pass');
+R(/^答對 (\d+) 題才算過關。(.*)$/, (m, n, x) => `You need ${n} right to pass. ${x ? tc(x) : ''}`.trim());
+R(/^全對，(.+)$/, (m, x) => `Perfect! ${tc(x)}`);
+R(/^第 (\d+) 關完成！第 (\d+) 關打開了$/, 'Stage $1 complete! Stage $2 is open');
+R(/^第 (\d+) 關完成！全部關卡都過了$/, 'Stage $1 complete! All stages cleared');
+R(/^文法練習 (\d+) \/ (\d+)$/, 'Grammar practice $1 / $2');
+R(/^看懂了，來練習（(\d+) 題）$/, 'Got it — practice ($1)');
+R(/^範例 (\d+)$/, 'Example $1');
+R(/^練習題（(\d+) 題）$/, 'Practice ($1)');
+R(/^た形：([ぁ-ゖァ-ヺー一-龯]+)$/, 'た-form: $1');
+R(/^例外：([ぁ-ゖァ-ヺー一-龯 →]+)$/, 'Exception: $1');
+R(/^修飾名詞，例：([ぁ-ゖァ-ヺー一-龯]+)$/, 'describes a noun, e.g. $1');
+R(/^這關還沒打開，建議先完成第 (\d+) 關「(.+)」，內容一樣可以先看。$/, (m, n, x) => `This stage isn’t open yet — we suggest finishing stage ${n} “${tc(x)}” first. You can still read it now.`);
 // 我的單字、查字典
 R(/^單字或片語（(.+)）$/, (m, a) => `Word or phrase (${t(a)})`);
 R(/^單字庫裡本來就有「(.+)」，用上面的搜尋就找得到。$/, '“$1” is already in the word list — search for it above.');
@@ -4241,19 +4275,8 @@ const LD = {
 '，但注意重音': ', but watch the accent', '正確寫法：': 'Correct spelling: ', '正確答案：': 'Answer: ',
 '這個來源裡沒有動詞。可以換一個題目來源，或先到字卡把動詞列入考題。': 'There are no verbs in this source. Pick another source, or add some verbs to your quiz in Cards first.',
 '這一輪完成了': 'Round complete', '再來一輪': 'Another round',
-// ---- 文法 ----
-'文法關卡': 'Grammar stages', '全部過關了！': 'All stages cleared!', '過關！': 'Passed!', '已過關': 'Passed', '全對，': 'Perfect! ',
-'這個文法你會了。': 'You’ve got this grammar point.', '差一點，看一下範例再練一次。': 'Almost — look at the examples and try again.',
-'先看範例拆解，再回來試試。': 'Look at the example breakdowns first, then try again.', '再練一次': 'Try again', '看範例': 'Examples', '看範例拆解': 'See example breakdowns',
-'文法練習': 'Grammar practice', '文法分頁': 'Grammar sections', '說明': 'Explanation', '練習題': 'Practice', '文法列表': 'Grammar list', '‹ 文法列表': '‹ Grammar list',
-'照順序學，後面的文法會用到前面的。每個文法點看完說明和範例，練習題答對八成就過關（6 題要對 5 題）；一關全部過關，下一關就會打開。': 'Learn in order — later points build on earlier ones. Read each point’s explanation and examples; get 80% of the practice right to pass (5 of 6). Clear a whole stage to unlock the next.',
-'全部關卡都過了': 'all stages cleared',
-'文法排列': 'Grammar view', '關卡（照順序學）': 'Stages (in order)', '分類': 'By topic', '詞性變化規則': 'Word-form rules', '實際變化例子': 'Real examples',
-'點一下看完整的變化表。': 'Tap one to see all its forms.', '找不到符合的文法。': 'No matching grammar.', '搜尋文法': 'Search grammar',
-'上面是整句，中間每個字下面是它的中文，最後一條一條說明為什麼這樣排。點句子裡的字可以查意思。': 'The whole sentence is on top, each word’s meaning is under it, and the notes explain why it’s put together that way. Tap any word to look it up.',
-'白話': 'In plain words', '為什麼：': 'Why: ', '不知道要用哪個？看變化表': 'Not sure which one? See the forms table',
-'黃色是這個文法點，點任何一個字可以查意思。': 'This grammar point is highlighted in yellow. Tap any word to look it up.',
-'目前的例句裡還沒有用到這個文法。': 'None of the example sentences use this grammar yet.', '出自單字：': 'From the word: ',
+// ---- 文法（語言頁的說法；文法關卡的共用文字在 i18n-ui.js）----
+'詞性變化規則': 'Word-form rules', '點一下看完整的變化表。': 'Tap one to see all its forms.',
 // ---- 單字庫、設定 ----
 '木琴：字母': 'Xylophone: letters', '字卡、單選、單字庫和點字看意思都會跟著換。': 'Cards, Choice, Words and tap-to-look-up all follow this.',
 '切換後會重新載入，所有語言頁一起換。學的語言不變；選 English 時，單字意思、說明和例句翻譯也會換成英文。': 'The page reloads and every language switches together. The language you study stays the same; with English, word meanings, explanations and sentence translations switch to English too.',
@@ -4331,18 +4354,6 @@ R(/^學習中（最多 (\d+) 個）$/, 'Studying (up to $1)');
 R(/^(\d+) 個$/, '$1');
 R(/^已學會 (.+)・(\d+)／(\d+) 字$/, 'Learned $1 · $2/$3 words');
 R(/^共 (\d+) 字，包含所有語言。$/, '$1 characters, covering every language.');
-R(/^第 (\d+) 關・(.+)$/, (m, n, x) => `Stage ${n} · ${T(x)}`);
-R(/^繼續學：(.+)$/, (m, x) => `Continue: ${T(x)}`);
-R(/^下一個：(.+)$/, (m, x) => `Next: ${T(x)}`);
-R(/^已過關 (\d+) \/ (\d+)$/, 'Passed $1 / $2');
-R(/^完成上一關就會打開・先偷看這關的 (\d+) 個文法$/, 'Opens when you finish the previous stage · peek at its $1 grammar points');
-R(/^練習題答對 (\d+) 題就過關$/, 'Get $1 right to pass');
-R(/^答對 (\d+) 題才算過關。$/, 'You need $1 right to pass. ');
-R(/^第 (\d+) 關完成！第 (\d+) 關打開了$/, 'Stage $1 complete! Stage $2 is open');
-R(/^第 (\d+) 關完成！全部關卡都過了$/, 'Stage $1 complete! All stages cleared');
-R(/^文法練習 (\d+) \/ (\d+)$/, 'Grammar practice $1 / $2');
-R(/^看懂了，來練習（(\d+) 題）$/, 'Got it — practice ($1)');
-R(/^範例 (\d+)$/, 'Example $1');
 R(/^App 裡的字（(\d+)）$/, 'Words in the app ($1)');
 R(/^App 裡用到的例句（(\d+)）$/, 'Example sentences in the app ($1)');
 R(/^(\d+) 個字$/, (m, n) => n + (n === '1' ? ' word' : ' words'));
