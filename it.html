@@ -6033,6 +6033,7 @@ function record(w, mode, correct, source) {
   S.items[w.id] = rec;
   bumpDay();
   Cloud.schedule();
+  refreshSrcCounts();
 }
 
 // ================= 語音 =================
@@ -6621,6 +6622,21 @@ function renderMC() {
     mcRound = { key, mode: UI.mcMode, queue, idx: 0, total: pool.length, src: UI.mcSrc, pos: UI.pos, right: 0 };
   }
   P.start();
+}
+// 答完一題就更新「題目來源」選單上的數字（單選、填空、聽寫）。
+// 以前要等這一輪做完、重畫分頁才會變，答錯了「填空錯題」還是顯示 0，看起來像沒記進錯題。
+// record() 每次記錄完都會呼叫；畫面上沒有那個選單就跳過。
+function refreshSrcCounts() {
+  const pills = [['mcSrc', MC_SRCS, srcPool], ['fillSrc', FILL_SRCS, srcPool]];
+  if (typeof DICT_SRCS !== 'undefined') pills.push(['dictSrc', DICT_SRCS, dictPool]);   // 只有日文頁有聽寫
+  for (const [id, srcs, pool] of pills) {
+    const el = document.getElementById(id); if (!el) continue;
+    for (const [k, l] of srcs) {
+      const o = el.querySelector(`option[value="${k}"]`);
+      const txt = `${l} ${pool(k).length}`;
+      if (o && o.dataset.src !== txt) { o.dataset.src = txt; o.textContent = txt; }
+    }
+  }
 }
 // 沒有題目時：說明為什麼、給一個去哪裡的按鈕（單選、填空、聽寫共用）
 function emptyWords(host, src) {
