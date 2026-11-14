@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v110'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v113'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -78,6 +78,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - `shared/dict.js`：線上查字典（給 mine.js 的表單用）。
   - `shared/mine.js`：「我的單字」的新增／編輯表單（editMine）。頁面有 `PAGE.mine` 才會出現入口（prefix、lang、name、posOpts、builtin、check、changed）。語言頁和日文頁都有。
   - `shared/tour.js`：首次使用導覽（Tour），各頁的步驟和文字在 `PAGE.tour`。
+  - `shared/pop-quiz.js`：突然考一題（Pop：tick、start、show），各頁的設定在 `PAGE.pop`（key、mode）。
   - `shared/voice.js`：Voice（讀語音、挑聲音、念）和設定裡的語音區 renderVoiceBox。各語言怎麼挑聲音在 `PAGE.voice`（日文會避開 Ichiro、Haruka 這類很機械的舊語音；語言頁看語言代碼、Google 語音和 config.js 的 voiceNames）。`Voice.speak(text, voiceOverride, rate)`。
 - 每個語言有自己的背景插畫（義大利：絲柏、托斯卡尼小鎮；西班牙：風車、橄欖樹；德國：阿爾卑斯雪山、城堡、桁架屋、冷杉；俄羅斯：洋蔥頂教堂、白樺樹、木屋；英文：鐘樓、拱橋、雙層巴士）。
 - 測試：`node n5src/it/test.js`（21061 項）、`node n5src/es/test.js`（20974 項）、`node n5src/de/test.js`（31429 項）、`node n5src/ru/test.js`（32586 項）、`node n5src/en/test.js`（19897 項），目前全部通過。
@@ -119,6 +120,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 各語言的 id 有前綴（`it:`、`es:`），日語沒有前綴。
 - 設定在 `n5:settings`（共用），語言頁自己的語音設定在 `it:settings`、`es:settings`。
 - 語言鎖定設定在 `langs:v1`，上次使用的語言在 `langs:last`。第一次使用時 lang.js 會建立 `langs:v1`：新使用者只開目前這個語言；已經有 `langs:last` 或學習紀錄的人維持以前的預設（日語＋義大利文）。
+- **單選不算每日題數**（2026-11-14）：`record()` 的 mode 是 `'mc'` 時不呼叫 bumpDay（只存紀錄）；單選分頁的特殊題型（日文助詞、詞性變化，語言頁冠詞／格與性別、介係詞練習句）也不算。填空、聽寫、五十音、發音練習、文法練習題照常算。
 - 每日題數：`SyncDays`（sync.js）。每台裝置有自己的代號 `n5:dev`，`S.dv[日期][裝置]` 各記各的，`S.days[日期]`＝各裝置加總（和舊數字取大），兩台裝置同一天練不會再算少。`bumpDay()` 用 `SyncDays.bump`，並且會 `Cloud.schedule()`（以前只有題數變動時不會同步）。
 - 複習間隔：1／3／7／14／30／60 天（7 天以上加 ±15% 隨機，避免同一天到期的字擠在一起）。只有填空答對才算「學會」。學會的字答錯降兩級（不是打回第一級）。
 - 錯題（`w[mode]`）：1＝錯題、2＝以前錯過。答錯 → 1；在任何地方答對一次 → 2（離開錯題）；錯題複習答錯 → 回到 1。錯題複習（w＝2）每輪 10 題，依 `rv[mode]`（上次在錯題複習出現的時間）由舊到新抽，同時間的隨機，所以抽過的要等其他字都出過才會再出現。
@@ -127,6 +129,13 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **突然考一題＋單選不算每日題數**（2026-11-14 使用者要求，全部語言）：
+  - 兩種時機跳出一題「看單字選意思」（拉起式面板）：做了一定題數（設定「單字庫 → 設定 → 練習 → 突然考一題」：關閉／每做 10／20／40 題，預設 20，存在共用的 `n5:settings` 的 `pop`），或隔了 2 天以上沒打開（`POP_AWAY_DAYS`，打開時「好久不見！先考你一題」）。
+  - 計數和上次打開的日期存在各語言自己的 `n5:pop`、`it:pop`…（`{ n, last }`），不同步。每次 record() 加一（單選也算進這個計數，只是不算每日題數）。有面板、導覽、選語言畫面開著時會等一下再跳。
+  - 題目從「待考」和「已學會」的字裡最久沒練到的 8 個隨機抽；答題照單選記錄（答錯進單選錯題、不算每日題數），按「繼續練習」或叉叉關掉後回到原本的題目（Quiz.active 接回去）。
+  - 程式在 `n5src/shared/pop-quiz.js`（日文頁 app-end.js 的 `// @include`、語言頁 lang-app.js 的 `/*@include*/`），各頁的 `PAGE.pop`；樣式 base.css 的 `.pop-sheet`；English 在 i18n-ui.js。
+  - 測試：`node n5src/pop-e2e.js n5work ja it es de ru en`（要 playwright 和 Chrome，不在 test-all.js 裡）：單選不加題數、填空加題數、做滿題數跳出、隔 5 天跳出、同一天不重複、設定關閉不跳、手機寬度。
 
 - **俄文字母加手寫體動畫**（2026-11-12）：發音 → 字母，點一個字母，面板裡多了「手寫體（俄國人平常寫的字）」：大寫、小寫的連筆手寫體（пропись）一筆一筆畫出來，有四條練字線（頂線、中線、基線、下線），點一下重播；系統設定「減少動態效果」時直接畫好。容易認錯的字有說明（т 手寫像 m、и 像 u、д 像 g、п 像 n…）。ъ、ы、ь 只有小寫。
   - 筆畫資料在 `n5src/ru/cursive.js`（`RU.CURSIVE`：字 → [寬度, 每一筆的 SVG path]；`RU.CURSIVE_NOTE`：小寫 → 說明），是 Claude 手畫的座標（沒有傾斜，畫的時候整個字往右斜 15°），座標說明在檔案開頭。英文介面的說明在 ru/i18n.js 最後。
