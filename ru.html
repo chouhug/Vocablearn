@@ -706,17 +706,13 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .dict-en[open]{display:flex}
 .dict-auto{color:var(--fg)}
 
-/* 文法小提醒（shared/gram-tip.js）：分頁上面撐開的空間，題目靠下 */
-.gtip-slot{display:flex;flex-direction:column;justify-content:center;flex:none;overflow:hidden}
+/* 文法小提醒（shared/gram-tip.js）：題目下面的空白處，靠近底部分頁的一小段淡色文字 */
+.gtip-slot{display:flex;flex-direction:column;justify-content:flex-end;flex:none;overflow:hidden}
 .gtip-slot[hidden]{display:none}
-.gtip{display:flex;flex-direction:column;gap:6px;padding:14px 16px;border-style:dashed}
-.gtip-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
-.gtip-h span{font-size:12px;font-weight:700;color:var(--pri);letter-spacing:.04em}
-.gtip-more{border:0;background:none;color:var(--pri);font:inherit;font-size:13px;font-weight:700;padding:4px 2px;cursor:pointer}
-.gtip-t{font-size:17px}
-.gtip-ex .sent{font-size:18px;line-height:1.7}
-.gtip-ex .meta{margin-top:2px}
-.gtip-p{margin:0;font-size:14px;color:var(--muted);line-height:1.6}
+.gtip{font-size:13px;line-height:1.6;color:var(--muted);padding:6px 10px 6px 12px;border-left:3px solid var(--pri-mid);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
+.gtip-h{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85}
+.gtip-t{color:var(--fg);font-weight:600;margin-right:6px}
+.gtip-more{border:0;background:none;color:var(--pri);font:inherit;font-weight:600;padding:2px 0 2px 6px;cursor:pointer;white-space:nowrap}
 
 /* 語言頁（義大利文、西班牙文、德文、俄文…）：沿用日文 App 的樣式（建置時從 ../index.html 抽出），這裡只補語言頁需要的部分 */
 :root{--font-ja:var(--font-ui);--font-kana:var(--font-ui)}
@@ -8065,12 +8061,11 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-gram]');
   if (b) { e.preventDefault(); openGram(b.dataset.gram); }
 });
-// ================= 文法小提醒＋題目靠下（日文頁和語言頁共用：n5src/shared/gram-tip.js） =================
+// ================= 文法小提醒（日文頁和語言頁共用：n5src/shared/gram-tip.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
-// 字卡、單選、填空分頁的內容不多時，下面（題目和底部分頁之間）會空一大塊。
-// 這裡在分頁最上面放一個 .gtip-slot：把剩下的空間撐在上面，題目和分類標籤就貼到下面（手指比較好按），
-// 空出來的地方放一張「文法小提醒」（從已過關的文法和下一個要學的文法裡抽）；放不下就只留空白、不放卡片。
-// 內容變長（答完出現說明）時不重新排，避免題目往上跳、按錯；換題（內容變短）、換分頁、轉螢幕時才重新排。
+// 字卡、單選、填空分頁的內容不多時，題目和底部分頁之間會空一大塊：在分頁最後面放一個 .gtip-slot 撐滿這塊空白，
+// 最下面（靠近底部分頁）放一小段淡色的「文法小提醒」（從已過關的文法和下一個要學的文法裡抽）；放不下就不放。
+// 題目照常在上面，slot 在題目下面，所以重新排版時題目不會移動：內容一變（答完出現說明、換題、換分頁、轉螢幕）就重新算。
 // 各頁要給 PAGE.gram.tip(id) → { sent: 例句 HTML, zh: 例句中文, plain: 白話說明 }（沒有範例就回傳 null）。
 const GramTip = {
   TABS: ['card', 'mc', 'fill'],
@@ -8085,51 +8080,41 @@ const GramTip = {
     const list = pool.length ? pool : ids.slice(0, 1);
     return list[Math.floor(Math.random() * list.length)];
   },
-  html(id, full) {
+  html(id) {
     const t = PAGE.gram.tip(id); if (!t) return '';
-    return `<div class="card gtip"><div class="gtip-h"><span>文法小提醒</span><button class="gtip-more" data-gram="${esc(id)}">看說明 ›</button></div>
-      <b class="gtip-t">${esc(PAGE.gram.title(id))}</b>
-      ${full ? `<div class="gtip-ex">${t.sent}<div class="meta">${esc(t.zh)}</div></div>` : ''}
-      ${t.plain ? `<p class="gtip-p">${esc(t.plain)}</p>` : ''}</div>`;
+    return `<div class="gtip"><span class="gtip-h">文法小提醒</span><b class="gtip-t">${esc(PAGE.gram.title(id))}</b>${t.plain ? `<span class="gtip-p">${esc(t.plain)}</span>` : ''}<button class="gtip-more" data-gram="${esc(id)}">看說明 ›</button></div>`;
   },
   host() { const t = UI.tab; return this.TABS.includes(t) ? $('#tab-' + t) : null; },
   tab() { this.id = this.pick(); this.lastH = 0; this.layout(); },
-  // 有東西變了：內容變長就不動，變短（換題、重畫）才重新排
+  slotOf(host) { const l = host.lastElementChild; return l && l.classList.contains('gtip-slot') ? l : null; },
+  // 有東西變了：內容高度變了（或 slot 被重畫掉）才重新排
   check() {
     const host = this.host(); if (!host || host.hidden || document.body.classList.contains('typing')) return;
-    const slot = host.firstElementChild && host.firstElementChild.classList.contains('gtip-slot') ? host.firstElementChild : null;
-    const h = this.contentH(host, slot);
-    if (slot && Math.abs(h - this.lastH) <= 2) return;   // 差不多：不動
-    // 答完題目（出現說明）變長時不動，題目才不會往上跳；字卡換一張、換題就重新排
-    const answered = (Quiz.active && Quiz.active.answered && host.contains(Quiz.active.host)) || !!host.querySelector('#fillIn[readonly]');
-    if (slot && h > this.lastH && answered) return;
+    const slot = this.slotOf(host);
+    if (slot && Math.abs(this.contentH(host, slot) - this.lastH) <= 2) return;
     this.layout();
   },
-  contentH(host, slot) { return host.scrollHeight - (slot ? slot.offsetHeight + 16 : 0); },
+  contentH(host, slot) { return host.scrollHeight - (slot && !slot.hidden ? slot.offsetHeight + 16 : 0); },
   layout() {
     const host = this.host(); if (!host || host.hidden || this.busy) return;
     this.busy = true;
-    let slot = host.firstElementChild && host.firstElementChild.classList.contains('gtip-slot') ? host.firstElementChild : null;
-    if (!slot) { slot = document.createElement('div'); slot.className = 'gtip-slot'; host.prepend(slot); }
+    // 其他分頁留下的 slot 拿掉（只有目前這個分頁有）
+    $$('.gtip-slot').forEach(x => { if (x.parentNode !== host) x.remove(); });
+    let slot = this.slotOf(host);
+    if (!slot) { slot = document.createElement('div'); slot.className = 'gtip-slot'; host.append(slot); }
     slot.innerHTML = ''; slot.style.height = '0px'; slot.hidden = true;
     const h = host.scrollHeight;   // 沒有 slot 時的內容高度
     this.lastH = h;
-    // 題目底部到畫面底部要留 main 和 .wrap 的 padding-bottom（底部分頁的高度＋間距），剛好不會出現捲動；slot 和內容之間有 flex gap 16px
+    // 底部到畫面底部要留 main 和 .wrap 的 padding-bottom（底部分頁的高度＋間距），剛好不會出現捲動；slot 和內容之間有 flex gap 16px
     const top = host.getBoundingClientRect().top + window.scrollY;
     const main = $('#main'), wrap = main && main.firstElementChild;
     const pad = el => el ? parseFloat(getComputedStyle(el).paddingBottom) || 0 : 0;
-    const bottom = window.innerHeight - pad(main) - pad(wrap);
-    const free = Math.floor(bottom - top - h - 16);
-    if (free > 24) {
+    const free = Math.floor(window.innerHeight - pad(main) - pad(wrap) - top - h - 16);
+    if (free > 40 && this.id) {
       slot.hidden = false; slot.style.height = free + 'px';
-      // 放得下完整的提醒就放完整的，不然放精簡的（只有名稱和白話），再不行就只留空白
-      for (const full of [true, false]) {
-        slot.innerHTML = this.id ? this.html(this.id, full) : '';
-        const c = slot.firstElementChild;
-        if (!c) break;
-        if (c.offsetHeight <= free) break;
-        slot.innerHTML = '';
-      }
+      slot.innerHTML = this.html(this.id);
+      const c = slot.firstElementChild;
+      if (!c || c.offsetHeight > free) { slot.innerHTML = ''; slot.hidden = true; slot.style.height = '0px'; }
     }
     this.busy = false;
   }
