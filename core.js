@@ -21,6 +21,30 @@ function addDays(dateStr, n) {
 }
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
+// ---- 連勝 ----
+// 一天的題數（days[日期]，所有語言加總，單選不算）達到 STREAK_MIN 就算「有練」。
+// 休息日：沒練的一天如果前一天有練、而且前 6 天內沒用過休息日，連勝不會斷（也不加天數）；連兩天沒練就歸零。
+// 今天還沒練到不算斷（還有機會）。回傳 { cur 目前連勝, best 最長紀錄, today 今天練到了沒, rest 用掉休息日的日期, marks: {日期: 'done'|'rest'} }
+const STREAK_MIN = 5;
+function streakOf(days, todayStr, min = STREAK_MIN) {
+  days = days || {};
+  const done = d => (days[d] || 0) >= min;
+  const keys = Object.keys(days).filter(d => days[d] > 0 && d <= todayStr).sort();
+  const out = { cur: 0, best: 0, today: done(todayStr), rest: [], marks: {} };
+  if (!keys.length) return out;
+  let cur = 0, lastRest = '', prevRest = false;
+  for (let d = keys[0]; d <= todayStr; d = addDays(d, 1)) {
+    if (done(d)) { cur++; prevRest = false; out.marks[d] = 'done'; }
+    else if (d === todayStr) break;                                     // 今天還可以練
+    else if (cur > 0 && !prevRest && (!lastRest || addDays(lastRest, 7) <= d)) { lastRest = d; prevRest = true; out.rest.push(d); out.marks[d] = 'rest'; }
+    else { cur = 0; prevRest = false; }
+    if (cur > out.best) out.best = cur;
+  }
+  if (cur === 0) out.rest = [];
+  out.cur = cur;
+  return out;
+}
+
 // ---- 進度規則 ----
 // 複習間隔（天）；7 天以上加 ±15% 隨機，同一天學的字之後才不會全部擠在同一天到期
 const SRS = [1, 3, 7, 14, 30, 60];
