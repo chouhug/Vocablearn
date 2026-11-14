@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v114'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v115'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -131,8 +131,9 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 ## 最近做過的改動
 
 - **突擊測驗＋單選不算每日題數**（2026-11-14 使用者要求，全部語言）：
-  - 兩種時機跳出一組三題（拉起式面板）：每做 10～25 題（每次隨機，存在 `goal`），或隔了 2 天以上沒打開（`POP_AWAY_DAYS`，「好久不見！先考你一組」）。設定「單字庫 → 設定 → 練習 → 突擊測驗」：開／關閉（共用的 `n5:settings` 的 `pop`：'on'／'off'，預設開）。
+  - 兩種時機跳出一組三題（**整個畫面蓋住、不能直接關掉**：沒有叉叉，Esc、點旁邊都關不掉，三題做完按「繼續練習」才回去；`.pop-full`，lang.js 的 OPEN／SCROLLER 也有它，背景會鎖住不能滑）：每做 10～25 題（每次隨機，存在 `goal`），或隔了 2 天以上沒打開（`POP_AWAY_DAYS`，「好久不見！先考你一組」）。設定「單字庫 → 設定 → 練習 → 突擊測驗」：開／關閉（共用的 `n5:settings` 的 `pop`：'on'／'off'，預設開）。
   - 一組：第 1 題看單字選意思；第 2 題日文有漢字的字考讀音（`PAGE.pop.readQ`），其他語言或沒有漢字時看意思選單字；第 3 題填空。題目從「待考」和「已學會」最久沒練到的 8 個字裡抽，盡量三題不同字。選擇照單選記錄（不算每日題數），填空照填空記錄（算每日題數，可以學會）。最後顯示「這一組答對 x／3 題」，按「繼續練習」關掉。
+  - **避免誤觸**：跳出來先顯示說明畫面（「3／三題做完才會回到原本的練習」），「開始作答」按鈕要等 1.2 秒（`POP_LOCK`）才按得下去，按鈕上有進度條；說明畫面時 Quiz.active 是 null，鍵盤也答不到後面的題目。各頁的鍵盤處理改成允許不在分頁裡的題目（`closest('.tab') || {}`）。
   - 計數和上次打開的日期存在各語言自己的 `n5:pop`、`it:pop`…（`{ n, goal, last }`），不同步。每次 record() 加一（單選也算進這個計數），突擊測驗本身的題目不算。有面板、導覽、選語言畫面開著時會等一下再跳。
   - 填空用固定的 id（#fillIn…），所以出填空題前會先清掉填空分頁，關掉後如果停在填空分頁就 renderFill() 畫回來（作答過的接著下一題）。
   - 程式在 `n5src/shared/pop-quiz.js`（日文頁 app-end.js 的 `// @include`、語言頁 lang-app.js 的 `/*@include*/`），各頁的 `PAGE.pop`；樣式 base.css 的 `.pop-sheet`；English 在 i18n-ui.js。
