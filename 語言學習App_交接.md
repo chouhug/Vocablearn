@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v116'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v117'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -78,6 +78,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - `shared/dict.js`：線上查字典（給 mine.js 的表單用）。
   - `shared/mine.js`：「我的單字」的新增／編輯表單（editMine）。頁面有 `PAGE.mine` 才會出現入口（prefix、lang、name、posOpts、builtin、check、changed）。語言頁和日文頁都有。
   - `shared/tour.js`：首次使用導覽（Tour），各頁的步驟和文字在 `PAGE.tour`。
+  - `shared/gram-tip.js`：文法小提醒＋題目靠下（GramTip：tab、check、layout），各頁的 `PAGE.gram.tip(id)`。
   - `shared/streak.js`：每日目標（goalN、GOAL_OPTS）和連勝（renderStreak、dayToast、openStreak）。連勝規則 `streakOf` 在 core.js。
   - `shared/pop-quiz.js`：突擊測驗（Pop：tick、start、plan、show），各頁的設定在 `PAGE.pop`（key、mode、rev、readQ）。填空題用 fill-tab.js 的 `fillQuestion(host, w, R, src, next)`（填空分頁和突擊測驗共用）。
   - `shared/voice.js`：Voice（讀語音、挑聲音、念）和設定裡的語音區 renderVoiceBox。各語言怎麼挑聲音在 `PAGE.voice`（日文會避開 Ichiro、Haruka 這類很機械的舊語音；語言頁看語言代碼、Google 語音和 config.js 的 voiceNames）。`Voice.speak(text, voiceOverride, rate)`。
@@ -131,6 +132,14 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **題目靠下＋文法小提醒**（2026-11-14 使用者要求，全部語言）：字卡、單選、填空分頁內容不多時，題目和分類標籤貼到下面（離底部分頁約 39px，剛好不用捲動），上面空出來的地方放「文法小提醒」。
+  - 分頁最上面插一個 `.gtip-slot`，高度＝畫面剩下的空間；放得下就放完整的提醒（文法名稱、第一個範例句和中文、白話說明、「看說明 ›」打開文法點），放不下放精簡的（名稱＋白話），再不行只留空白。
+  - 文法從已過關的文法點和下一個要學的裡隨機抽（還沒過關任何一個就是第一個），換分頁時換一個。
+  - 什麼時候重新排：換分頁、轉螢幕、內容變短（換題）、字卡換一張；答完題目（單選已作答、填空 readonly）內容變長時不重排，題目才不會往上跳。打字中（body.typing）不動。
+  - 程式在 `n5src/shared/gram-tip.js`（showTab 最後呼叫 `GramTip.tab()`，MutationObserver 看 #main），各頁 `PAGE.gram.tip(id)`；樣式 base.css 最後。
+  - 順便修：語言頁的 `<body>` 一直有瀏覽器預設的 8px margin（日文頁的 page.html 有 body{margin:0}，語言頁沒有），base.css 加上 `body{margin:0}`。
+  - 測試：`node n5src/tip-e2e.js n5work`（日 385×827 深色、義 360×740、俄 412×915）。
 
 - **連勝＋每日目標可以自己選**（2026-11-14 使用者要求，全部語言共用一個連勝）：
   - 規則（core.js 的 `streakOf(days, today)`，`STREAK_MIN = 5`）：一天的題數（`S.days`，所有語言加總，單選不算）達到 5 題就算有練；沒練的一天如果前一天有練、而且前 6 天內沒用過休息日，連勝不斷（不加天數）；連兩天沒練歸零；今天還沒練到不算斷。回傳 cur、best、today、rest、marks。core-test.js 有 9 項。
