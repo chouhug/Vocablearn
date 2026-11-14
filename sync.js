@@ -48,8 +48,8 @@
       const m = S.dv[d] = S.dv[d] || {};
       m[DEV] = (m[DEV] || 0) + 1;
       S.days[d] = Math.max((S.days[d] || 0) + 1, sum(m));
-      // 只留最近 90 天
-      for (const k of ['days', 'dv']) { const keys = Object.keys(S[k]).sort(); while (keys.length > 90) delete S[k][keys.shift()]; }
+      // 每台裝置的題數只留最近 90 天；每天的總數留 800 天（連勝要往回算，core.js 的 streakOf）
+      for (const [k, max] of [['days', 800], ['dv', 90]]) { const keys = Object.keys(S[k]).sort(); while (keys.length > max) delete S[k][keys.shift()]; }
     }
   };
 
