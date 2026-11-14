@@ -653,11 +653,24 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .dict-def[aria-pressed="true"]{border-color:var(--pri)}
 /* 拉起式面板 Sheet 的內容、提醒框（日文頁也用得到；語言頁在 lang-style.css 也有同樣的規則） */
 .sheet-body{overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:0 2px 6px;min-height:0}
-/* 突然考一題（shared/pop-quiz.js） */
-.pop-sheet .pop-sub{margin:0}
-.pop-sheet .qcard{margin:0;box-shadow:none}
-.pop-sheet .pop-note{font-size:12px}
-.pop-sheet .pop-step{font-weight:700}
+/* 突擊測驗（shared/pop-quiz.js）：蓋住整個畫面 */
+.pop-full{position:fixed;inset:0;z-index:85;background:var(--bg);color:var(--fg);overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding:max(18px,env(safe-area-inset-top)) 16px max(28px,env(safe-area-inset-bottom));opacity:0;transform:translateY(12px);transition:opacity .18s,transform .18s}
+.pop-full.in{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.pop-full{transition:none;transform:none}}
+.pop-in{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+.pop-title{font-size:24px;font-weight:800}
+.pop-sub{margin:4px 0 0}
+.pop-step{font-weight:700}
+.pop-note{font-size:12px;text-align:center;margin-top:4px}
+.pop-intro{text-align:center;display:flex;flex-direction:column;align-items:center;gap:6px;padding:22px 16px}
+.pop-intro p{margin:0}
+.pop-big{font-size:56px;font-weight:800;line-height:1;color:var(--pri)}
+.pop-go{position:relative;overflow:hidden;margin-top:12px}
+.pop-go i{position:absolute;left:0;top:0;bottom:0;width:0;background:rgba(255,255,255,.22);animation:popfill 1.2s linear forwards}
+.pop-go:not([disabled]) i{display:none}
+.pop-go span{position:relative}
+@keyframes popfill{to{width:100%}}
 .hl-warn{background:var(--amb);border:1px solid var(--amb-edge);color:var(--amb-ink);border-radius:10px;padding:8px 12px;font-size:15px}
 /* 我的單字表單：「更多」和英文解釋收起來 */
 .mymore,.dict-en{border-top:1px solid var(--line);padding-top:6px}
@@ -3906,7 +3919,7 @@ const D = {
 '每天到期複習最多幾個字': 'Daily limit for due reviews', '不限': 'No limit',
 '突擊測驗': 'Pop quiz', '突擊測驗！': 'Pop quiz!', '好久不見！先考你一組': 'Long time no see! Quick quiz first', '繼續練習': 'Keep practicing',
 '兩題選擇、一題填空，考考你學過的字。': 'Two multiple-choice questions and one fill-in on words you have studied.',
-'可以在「單字庫 → 設定 → 練習」關掉突擊測驗。': 'You can turn pop quizzes off in Words → Settings → Practice.', '突擊測驗：關閉': 'Pop quiz: off', '突擊測驗：開': 'Pop quiz: on',
+'可以在「單字庫 → 設定 → 練習」關掉突擊測驗。': 'You can turn pop quizzes off in Words → Settings → Practice.', '突擊測驗：關閉': 'Pop quiz: off', '突擊測驗：開': 'Pop quiz: on', '三題做完才會回到原本的練習': 'Finish all three to get back to your practice', '準備一下…': 'Get ready…', '開始作答': 'Start',
 '到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。': 'When many words are due, the most overdue come first; whatever you don’t finish today carries over. A wrong answer drops a word two levels instead of starting over.',
 '每輪題數會套用到五十音、單選、字卡和填空。「最近學過」一輪會出完範圍內的全部字；錯題複習每輪 10 題，從以前錯過的字輪流抽，抽過的要等其他字都出過才會再出現。': 'Round size applies to Kana, Choice, Cards and Fill-in. A “Recently learned” round covers every word in the range; mistake review always uses 10 random questions.',
 '介面語言 Language': 'Language 介面語言', '介面語言': 'Interface language',
@@ -7264,7 +7277,7 @@ document.addEventListener('keydown', e => {
   if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
   if (e.metaKey || e.ctrlKey || e.altKey || Sheet.isOpen()) return;
   const st = Quiz.active;
-  if (!st || !st.host.isConnected || st.host.closest('.tab').hidden) return;
+  if (!st || !st.host.isConnected || (st.host.closest('.tab') || {}).hidden) return;   // 突擊測驗的題目不在分頁裡
   const k = e.key.toLowerCase();
   const idx = '1234'.indexOf(k) >= 0 ? '1234'.indexOf(k) : 'abcd'.indexOf(k);
   if (idx >= 0 && k.length === 1 && !st.answered) { e.preventDefault(); if ($$('.opt', st.host)[idx]) st.choose(idx); }
@@ -8694,7 +8707,7 @@ const Tour = {
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card && !Tour.card.hidden) Tour.end(); });
 // ================= 突然考一組（日文頁和語言頁共用：n5src/shared/pop-quiz.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
-// 兩種時機會跳出一組三題（兩題選擇＋一題填空）：
+// 兩種時機會跳出一組三題（兩題選擇＋一題填空），蓋住整個畫面、做完才能回去（.pop-full，樣式在 base.css）：
 //   1. 做了 10～25 題（每次隨機）：設定「突擊測驗」（SET.pop：'off' 關閉，其他＝開，預設開）。record() 每記一題就呼叫 Pop.tick()。
 //   2. 隔了好幾天沒打開（POP_AWAY_DAYS 天以上）：啟動時呼叫 Pop.start()。
 // 一組的題目：第 1 題看單字選意思；第 2 題考讀音（日文有漢字的字，PAGE.pop.readQ），沒有就看意思選單字；第 3 題填空。
@@ -8704,6 +8717,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card 
 // 題目和選項的畫法用 PAGE.mc.word 和 fillQuestion（shared/fill-tab.js），和單選、填空分頁一樣。
 const POP_MIN = 10, POP_MAX = 25;
 const POP_AWAY_DAYS = 2;
+const POP_LOCK = 1200;   // 跳出來後「開始作答」要等多久才按得下去（毫秒），避免誤觸
 const Pop = {
   timer: null, active: false,
   on() { return SET.pop !== 'off'; },
@@ -8719,7 +8733,7 @@ const Pop = {
     return Array.from({ length: n }, (_, i) => top[i % top.length]);
   },
   // 有其他面板、導覽、選語言畫面開著時先不跳
-  busy() { return document.hidden || (typeof Sheet !== 'undefined' && Sheet.isOpen()) || !!document.querySelector('.pk-back:not([hidden]), .tour-card:not([hidden]), .lg-welcome'); },
+  busy() { return this.active || document.hidden || (typeof Sheet !== 'undefined' && Sheet.isOpen()) || !!document.querySelector('.pk-back:not([hidden]), .tour-card:not([hidden]), .lg-welcome, .pop-full'); },
   // 每記一題呼叫一次（record() 裡）；突擊測驗本身的題目不算
   tick() {
     if (this.active) return;
@@ -8764,22 +8778,36 @@ const Pop = {
     const qs = this.plan(); if (!qs.length) return;
     const title = why === 'away' ? '好久不見！先考你一組' : '突擊測驗！';
     const sub = why === 'away' ? `你已經 ${days} 天沒來練習了，看看還記不記得這些字。` : '兩題選擇、一題填空，考考你學過的字。';
-    const el = Sheet.open(title, `<p class="meta pop-sub">${esc(sub)}</p><div class="pop-step" id="popStep"></div><div id="popq"></div><div class="meta pop-note">可以在「單字庫 → 設定 → 練習」關掉突擊測驗。</div>`, title);
-    el.classList.add('pop-sheet');
-    const host = $('#popq', el), stepEl = $('#popStep', el);
-    const prev = Quiz.active;   // 原本分頁上的題目：關掉後鍵盤操作要接回去
-    // 填空用固定的 id，同時只能有一題：考填空前先清掉填空分頁，關掉後再畫回來（作答過的會接著下一題）
+    // 整個畫面蓋住、不能直接關掉（沒有叉叉，點旁邊、Esc 都不會關），做完三題才回去。
+    // 剛跳出來時手指可能還在點原本的題目：先顯示說明，「開始作答」要等 POP_LOCK 毫秒才按得下去
+    const el = document.createElement('div');
+    el.className = 'pop-full'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true'); el.setAttribute('aria-label', title);
+    el.innerHTML = `<div class="pop-in">
+      <div class="pop-head"><div class="pop-title">${esc(title)}</div><p class="meta pop-sub">${esc(sub)}</p></div>
+      <div class="card pop-intro" id="popIntro"><div class="pop-big" aria-hidden="true">3</div><p>三題做完才會回到原本的練習</p>
+        <button class="btn solid block pop-go" id="popGo" disabled><i aria-hidden="true"></i><span>準備一下…</span></button></div>
+      <div class="pop-step" id="popStep" hidden></div><div id="popq"></div>
+      <div class="meta pop-note">可以在「單字庫 → 設定 → 練習」關掉突擊測驗。</div>
+    </div>`;
+    document.body.appendChild(el);
+    const host = $('#popq', el), stepEl = $('#popStep', el), goBtn = $('#popGo', el);
+    const prev = Quiz.active;   // 原本分頁上的題目：做完後鍵盤操作要接回去
+    Quiz.active = null;          // 說明畫面時鍵盤不能答到後面的題目
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    requestAnimationFrame(() => el.classList.add('in'));
+    setTimeout(() => { goBtn.disabled = false; $('span', goBtn).textContent = '開始作答'; goBtn.focus({ preventScroll: true }); }, POP_LOCK);
+    // 填空用固定的 id，同時只能有一題：考填空前先清掉填空分頁，做完再畫回來（作答過的會接著下一題）
     const fillTab = $('#tab-fill');
-    let cleared = false, right = 0, i = 0, closed = false;
+    let cleared = false, right = 0, i = 0;
     this.active = true;
-    const done = () => {
-      if (closed) return; closed = true;
+    const close = () => {
       this.active = false;
       document.body.classList.remove('typing');
-      if (Quiz.active && Quiz.active.host === host) Quiz.active = prev;
+      Quiz.active = prev;
+      el.classList.remove('in');
+      setTimeout(() => el.remove(), 200);
       if (cleared && !fillTab.hidden) renderFill();
     };
-    const close = () => { done(); Sheet.close(); };
     const R = { queue: qs, idx: 0, total: qs.length, right: 0, done: false };
     const isLast = () => i === qs.length - 1;
     // 答完一題：最後一題的按鈕改成「繼續練習」並顯示這一組的成績（按鈕在作答之後才畫出來，所以等一下）
@@ -8796,6 +8824,7 @@ const Pop = {
       if (i >= qs.length) return close();
       R.idx = i; R.done = false; R.right = 0;
       stepEl.textContent = `第 ${i + 1} 題／共 ${qs.length} 題`;
+      el.scrollTop = 0;
       const q = qs[i], w = q.w, rec = getRec(w.id);
       const go = () => { i++; step(); };
       if (q.kind === 'fill') {
@@ -8803,9 +8832,10 @@ const Pop = {
         const src = rec.s === 'learned' && rec.due && rec.due <= today() ? 'due' : 'learn';
         fillQuestion(host, w, R, src, go);
         $$('.qhead', host).forEach(x => x.remove());
-        const after = $('#fillAfter', host);
         const mo = new MutationObserver(() => { if (R.done) { mo.disconnect(); answered(R.right > 0); } });
-        mo.observe(after, { childList: true });
+        mo.observe($('#fillAfter', host), { childList: true });
+        // 打字時（鍵盤打開）把題目捲到看得到的地方
+        $('#fillIn', host).addEventListener('focus', () => setTimeout(() => $('#fillCard', host).scrollIntoView({ block: 'start', behavior: 'smooth' }), 300));
         return;
       }
       const src = rec.s === 'learned' ? 'learned' : 'learn';
@@ -8822,9 +8852,11 @@ const Pop = {
       }, go);
       if (!spec && W.speak) W.speak(w, q.mode);
     };
-    step();
-    // 用叉叉或點旁邊關掉時也把狀態接回去
-    const watch = setInterval(() => { if (!Sheet.isOpen() || !document.contains(host)) { clearInterval(watch); done(); } }, 300);
+    goBtn.onclick = () => {
+      if (goBtn.disabled) return;
+      $('#popIntro', el).remove(); stepEl.hidden = false;
+      step();
+    };
   }
 };
 

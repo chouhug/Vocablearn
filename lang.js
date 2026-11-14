@@ -184,10 +184,10 @@
     });
   }
 
-  // ---- 跳出面板（選單、單字詳細、導覽、選語言）時，後面的頁面不能滑 ----
+  // ---- 跳出面板（選單、單字詳細、導覽、選語言、突擊測驗）時，後面的頁面不能滑 ----
   // 面板是各頁自己建立的（ui.js、lang-app.js、導覽…），這裡統一看畫面上有沒有開著的面板
-  const OPEN = '.pk-back:not([hidden]), .tour-card:not([hidden]), .lg-welcome';
-  const SCROLLER = '.pk-list, .sheet-body, .lg-welcome, .tour-card';
+  const OPEN = '.pk-back:not([hidden]), .tour-card:not([hidden]), .lg-welcome, .pop-full';
+  const SCROLLER = '.pk-list, .sheet-body, .lg-welcome, .tour-card, .pop-full';
   const isOpen = () => !!document.querySelector(OPEN);
   function lockCheck() { document.documentElement.classList.toggle('lg-lock', isOpen()); }
   // iPhone／iPad 的 Safari 有時不理 overflow:hidden：面板開著時，手指不在面板裡能捲動的區域就不讓頁面動
