@@ -657,6 +657,7 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .pop-sheet .pop-sub{margin:0}
 .pop-sheet .qcard{margin:0;box-shadow:none}
 .pop-sheet .pop-note{font-size:12px}
+.pop-sheet .pop-step{font-weight:700}
 .hl-warn{background:var(--amb);border:1px solid var(--amb-edge);color:var(--amb-ink);border-radius:10px;padding:8px 12px;font-size:15px}
 /* 我的單字表單：「更多」和英文解釋收起來 */
 .mymore,.dict-en{border-top:1px solid var(--line);padding-top:6px}
@@ -3903,8 +3904,9 @@ const D = {
 '翻頁：文法、清單': 'Page flip: grammar, lists', '啾：點單字': 'Chirp: tap a word', '啵：打開選單': 'Pop: open a menu', '一輪完成': 'Round complete',
 '練習': 'Practice', '每輪題數': 'Questions per round', '「最近學過」的範圍': '“Recently learned” range',
 '每天到期複習最多幾個字': 'Daily limit for due reviews', '不限': 'No limit',
-'突然考一題': 'Pop quiz', '突然考你一題！': 'Pop quiz!', '好久不見！先考你一題': 'Long time no see! Quick quiz first', '繼續練習': 'Keep practicing',
-'可以在「單字庫 → 設定 → 練習」調整多久考一次或關掉。': 'You can change how often this appears, or turn it off, in Words → Settings → Practice.', '突然考一題：關閉': 'Pop quiz: off',
+'突擊測驗': 'Pop quiz', '突擊測驗！': 'Pop quiz!', '好久不見！先考你一組': 'Long time no see! Quick quiz first', '繼續練習': 'Keep practicing',
+'兩題選擇、一題填空，考考你學過的字。': 'Two multiple-choice questions and one fill-in on words you have studied.',
+'可以在「單字庫 → 設定 → 練習」關掉突擊測驗。': 'You can turn pop quizzes off in Words → Settings → Practice.', '突擊測驗：關閉': 'Pop quiz: off', '突擊測驗：開': 'Pop quiz: on',
 '到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。': 'When many words are due, the most overdue come first; whatever you don’t finish today carries over. A wrong answer drops a word two levels instead of starting over.',
 '每輪題數會套用到五十音、單選、字卡和填空。「最近學過」一輪會出完範圍內的全部字；錯題複習每輪 10 題，從以前錯過的字輪流抽，抽過的要等其他字都出過才會再出現。': 'Round size applies to Kana, Choice, Cards and Fill-in. A “Recently learned” round covers every word in the range; mistake review always uses 10 random questions.',
 '介面語言 Language': 'Language 介面語言', '介面語言': 'Interface language',
@@ -4180,9 +4182,10 @@ R(/^看「(.+)」的詞性和變化形$/, 'Part of speech and forms of “$1”'
 R(/^目前只顯示「(.+)」，可以改選「全部」。$/, (m, a) => `Only showing “${t(a)}”. You can switch to “All”.`);
 R(/^「(.+)」範圍內還沒有學過的字。可以在上方把範圍調大，或先到字卡把字列入考題。$/, (m, a) => `No words learned in “${t(a)}”. Widen the range above, or add words to your quiz from Cards.`);
 R(/^已標記為學會，(\d+) 天後會再考一次$/, 'Marked as learned — it will come back in $1 days');
-R(/^到期複習：每天最多 (\d+) 個$/, 'Due reviews: up to $1 a day'); R(/^到期複習：不限$/, 'Due reviews: no limit'); R(/^每做 (\d+) 題$/, 'Every $1 questions'); R(/^突然考一題：每做 (\d+) 題$/, 'Pop quiz: every $1 questions');
-R(/^你已經 (\d+) 天沒來練習了，看看還記不記得這個字。$/, "You haven't practiced for $1 days. Do you still remember this word?"); R(/^已經練了 (\d+) 題，來一題突擊測驗。$/, "You've done $1 questions — time for a surprise check.");
-R(/^做了一定題數，或隔了 (\d+) 天以上沒打開，會突然跳出一題考你學過的字。答錯會記進單選錯題。$/, "After a number of questions, or when you haven't opened the app for $1+ days, a question on a word you've studied pops up. Wrong answers go to Choice mistakes."); R(/^(\d+) 個$/, '$1 words');
+R(/^到期複習：每天最多 (\d+) 個$/, 'Due reviews: up to $1 a day'); R(/^到期複習：不限$/, 'Due reviews: no limit'); R(/^開（每做 (\d+)～(\d+) 題）$/, 'On (every $1–$2 questions)');
+R(/^第 (\d+) 題／共 (\d+) 題$/, 'Question $1 of $2'); R(/^這一組答對 (\d+)／(\d+) 題$/, '$1 of $2 correct in this set');
+R(/^你已經 (\d+) 天沒來練習了，看看還記不記得這些字。$/, "You haven't practiced for $1 days. Do you still remember these words?");
+R(/^每做 (\d+)～(\d+) 題（每次不一定），或隔了 (\d+) 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。$/, "Every $1–$2 questions (it varies), or when you haven't opened the app for $3+ days, a set of three questions on words you've studied pops up: two multiple-choice (Japanese words with kanji test the reading) and one fill-in."); R(/^(\d+) 個$/, '$1 words');
 R(/^已學會，明天（(.+)）會出現在到期複習。$/, 'Learned! It will be in due review tomorrow ($1).');
 R(/^下次複習：(.+)$/, 'Next review: $1');
 R(/^已學會 (\d+)\/(\d+)$/, 'Learned $1/$2');
@@ -6778,7 +6781,7 @@ const ORDER = (() => {
 let S = store.get('n5:progress', null);
 if (!S || typeof S !== 'object' || !S.items) S = { items: {}, days: {} };
 S.days = S.days || {};
-const SET = Object.assign({ vib: 'on', sfx: 'on', round: 20, pop: 20, recent: 'd1', mean: 'zh', theme: 'system', rate: 0.9 }, store.get('n5:settings', {}));
+const SET = Object.assign({ vib: 'on', sfx: 'on', round: 20, pop: 'on', recent: 'd1', mean: 'zh', theme: 'system', rate: 0.9 }, store.get('n5:settings', {}));
 // ================= 介面語言（中文／English；日文頁和語言頁共用：n5src/shared/i18n.js） =================
 // 程式裡的介面文字都寫中文；選 English 時，畫面上的中文由對照表（I18N.en：i18n-ui.js、ja/i18n.js、lang-i18n.js、各語言的 i18n.js）即時換成英文。
 // 學的語言（有 lang="ja"、lang="it"… 的區塊，或 class="ja"）不會動。換語言時重新載入頁面，避免中英混雜。
@@ -6861,7 +6864,7 @@ function record(w, mode, correct, source) {
   if (mode !== 'mc') bumpDay(); else saveLocal();
   Cloud.schedule();
   refreshSrcCounts();
-  Pop.tick();   // 做了一定題數就突然考一題（shared/pop-quiz.js）
+  Pop.tick();   // 做了 10～25 題就跳出突擊測驗（shared/pop-quiz.js）
 }
 
 // ================= 語音 =================
@@ -7662,11 +7665,16 @@ function nextFillQ(keepFocus) {
   if (R.idx >= R.queue.length) { document.body.classList.remove('typing'); return roundDone(host, R, () => { fillRound = null; renderFill(); }); }
   const w = R.queue[R.idx];
   const src = { fillWrong: 'wrong', fillReview: 'review', due: 'due' }[R.src] || 'learn';
+  fillQuestion(host, w, R, src, () => { R.idx++; R.done = false; nextFillQ(true); }, keepFocus);
+}
+// 畫一題填空並處理作答（填空分頁和「突然考一題」共用）。R 要有 queue、idx、total、right、done；
+// 答完按「下一題」呼叫 next()。頁面上同時只能有一題填空（PAGE.fill 用固定的 id），所以突擊題會先清掉填空分頁。
+function fillQuestion(host, w, R, src, next, keepFocus) {
   const q = PAGE.fill.make(w, R);
   host.innerHTML = `<div class="card" id="fillCard">
     ${q.html}
   </div>`;
-  const inp = $('#fillIn'), blank = $('#blank');
+  const inp = $('#fillIn', host), blank = $('#blank', host);
   let answered = false;
   inp.addEventListener('input', () => q.live(inp, blank));
   const hb = $('#fillHintBtn');
@@ -7700,7 +7708,6 @@ function nextFillQ(keepFocus) {
     </div>`;
     if (q.after) q.after(ok);
   };
-  const next = () => { R.idx++; R.done = false; nextFillQ(true); };
   $('#fillForm').addEventListener('submit', e => {
     e.preventDefault();
     if (answered) return next();
@@ -7943,7 +7950,7 @@ document.addEventListener('click', e => {
 // ================= 單字庫 =================
 // 這一頁和日文頁不一樣的地方（共用的分頁程式用 PAGE.…）
 const PAGE = {
-  pop: { key: LP + 'pop', mode: 'it2zh' },   // 突然考一題（shared/pop-quiz.js）
+  pop: { key: LP + 'pop', mode: 'it2zh', rev: 'zh2it', readQ: () => null },   // 突擊測驗（shared/pop-quiz.js）
   voice: {
     GOOD: /natural|neural|premium|enhanced|online|google|siri/i,
     match: v => v.lang.toLowerCase().startsWith(LC.id),
@@ -8246,9 +8253,9 @@ function renderLib() {
           <label class="label" for="dueCapSel">每天到期複習最多幾個字</label>
           <select id="dueCapSel">${DUE_CAPS.map(n => `<option value="${n}"${String(SET.dueCap || 30) === String(n) ? ' selected' : ''}>${n === 'all' ? '不限' : n + ' 個'}</option>`).join('')}</select>
           <div class="meta">到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。</div>
-          <label class="label" for="popSel">突然考一題</label>
-          <select id="popSel">${[['off', '關閉'], ...POP_STEPS.map(n => [n, `每做 ${n} 題`])].map(([k, l]) => `<option value="${k}"${String(Pop.every() || 'off') === String(k) ? ' selected' : ''}>${l}</option>`).join('')}</select>
-          <div class="meta">做了一定題數，或隔了 ${POP_AWAY_DAYS} 天以上沒打開，會突然跳出一題考你學過的字。答錯會記進單選錯題。</div>
+          <label class="label" for="popSel">突擊測驗</label>
+          <select id="popSel"><option value="on"${Pop.on() ? ' selected' : ''}>開（每做 ${POP_MIN}～${POP_MAX} 題）</option><option value="off"${Pop.on() ? '' : ' selected'}>關閉</option></select>
+          <div class="meta">每做 ${POP_MIN}～${POP_MAX} 題（每次不一定），或隔了 ${POP_AWAY_DAYS} 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。</div>
         </section>
         ${P.langHTML()}
         <section><h4>單字意思</h4>
@@ -8285,7 +8292,7 @@ function renderLib() {
   renderVoiceBox(); renderAuthBox();
   $('#roundSel').onchange = e => { SET.round = e.target.value === 'all' ? 'all' : Number(e.target.value); saveSet(); mcRound = null; fillRound = null; deck = null; if (P.resetRounds) P.resetRounds(); toast(SET.round === 'all' ? '每輪：全部' : `每輪 ${SET.round} 題`); };
   $('#dueCapSel').onchange = e => { SET.dueCap = e.target.value === 'all' ? 'all' : Number(e.target.value); saveSet(); fillRound = null; toast(SET.dueCap === 'all' ? '到期複習：不限' : `到期複習：每天最多 ${SET.dueCap} 個`); };
-  $('#popSel').onchange = e => { SET.pop = e.target.value === 'off' ? 'off' : Number(e.target.value); saveSet(); toast(SET.pop === 'off' ? '突然考一題：關閉' : `突然考一題：每做 ${SET.pop} 題`); };
+  $('#popSel').onchange = e => { SET.pop = e.target.value; saveSet(); toast(SET.pop === 'off' ? '突擊測驗：關閉' : '突擊測驗：開'); };
   $('#hintSel').onchange = e => { SET.fillHint = e.target.value; saveSet(); fillRound = null; toast(SET.fillHint === 'show' ? '填空提示：一開始就顯示' : '填空提示：按了才顯示'); };
   $('#recentSet').onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; toast(`最近學過：${recentLabel()}`); renderLib(); };
   $('#vibSel').onchange = e => { SET.vib = e.target.value; saveSet(); buzz(true); };
@@ -8685,46 +8692,50 @@ const Tour = {
   }
 };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card && !Tour.card.hidden) Tour.end(); });
-// ================= 突然考一題（日文頁和語言頁共用：n5src/shared/pop-quiz.js） =================
+// ================= 突然考一組（日文頁和語言頁共用：n5src/shared/pop-quiz.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
-// 兩種時機會跳出一題「看單字選意思」：
-//   1. 做了一定題數：設定「突然考一題」（SET.pop：10／20／40 題，'off' 關閉，預設 20）。record() 每記一題就呼叫 Pop.tick()。
+// 兩種時機會跳出一組三題（兩題選擇＋一題填空）：
+//   1. 做了 10～25 題（每次隨機）：設定「突擊測驗」（SET.pop：'off' 關閉，其他＝開，預設開）。record() 每記一題就呼叫 Pop.tick()。
 //   2. 隔了好幾天沒打開（POP_AWAY_DAYS 天以上）：啟動時呼叫 Pop.start()。
-// 題目從「待考」和「已學會」的字裡，挑最久沒練到的幾個隨機抽一個；答題照單選記錄（會進單選錯題，不算每日題數）。
-// 各頁要給 PAGE.pop = { key: 存計數的 localStorage key, mode: 單選「看單字選意思」的題型代碼 }，
-// 題目和選項的畫法用 PAGE.mc.word（和單選分頁一樣）。
-const POP_STEPS = [10, 20, 40];
+// 一組的題目：第 1 題看單字選意思；第 2 題考讀音（日文有漢字的字，PAGE.pop.readQ），沒有就看意思選單字；第 3 題填空。
+// 題目從「待考」和「已學會」最久沒練到的字裡抽（盡量三題不同字）；作答照單選、填空記錄（選擇不算每日題數，填空算）。
+// 各頁要給 PAGE.pop = { key: 存計數的 localStorage key, mode: 看單字選意思的題型代碼, rev: 看意思選單字的題型代碼,
+//   readQ(w): 要考讀音時回傳 { prompt, options: [{ html, cls, correct }], after }，不考就回傳 null }。
+// 題目和選項的畫法用 PAGE.mc.word 和 fillQuestion（shared/fill-tab.js），和單選、填空分頁一樣。
+const POP_MIN = 10, POP_MAX = 25;
 const POP_AWAY_DAYS = 2;
 const Pop = {
-  timer: null,
-  every() { return SET.pop === 'off' ? 0 : (POP_STEPS.includes(Number(SET.pop)) ? Number(SET.pop) : 20); },
+  timer: null, active: false,
+  on() { return SET.pop !== 'off'; },
+  goal() { return POP_MIN + Math.floor(Math.random() * (POP_MAX - POP_MIN + 1)); },
   state() { const s = store.get(PAGE.pop.key, null); return s && typeof s === 'object' ? s : { n: 0, last: '' }; },
   save(s) { store.set(PAGE.pop.key, s); },
-  // 最久沒練到的 8 個字裡隨機抽一個
-  pick() {
+  // 最久沒練到的字（至少 8 個）裡隨機抽 n 個；字不夠就重複用
+  pick(n) {
     const list = WORDS.filter(w => { const s = getRec(w.id).s; return s === 'queued' || s === 'learned'; });
-    if (list.length < 1) return null;
+    if (!list.length) return [];
     list.sort((a, b) => (getRec(a.id).t || 0) - (getRec(b.id).t || 0));
-    const top = list.slice(0, 8);
-    return top[Math.floor(Math.random() * top.length)];
+    const top = shuffle(list.slice(0, Math.max(8, n)));
+    return Array.from({ length: n }, (_, i) => top[i % top.length]);
   },
   // 有其他面板、導覽、選語言畫面開著時先不跳
   busy() { return document.hidden || (typeof Sheet !== 'undefined' && Sheet.isOpen()) || !!document.querySelector('.pk-back:not([hidden]), .tour-card:not([hidden]), .lg-welcome'); },
-  // 每記一題呼叫一次（record() 裡）
+  // 每記一題呼叫一次（record() 裡）；突擊測驗本身的題目不算
   tick() {
+    if (this.active) return;
     const s = this.state();
+    if (!s.goal) s.goal = this.goal();
     s.n = (s.n || 0) + 1; s.last = today();
-    const every = this.every();
-    if (every && s.n >= every) { s.n = 0; this.later('count'); }
+    if (this.on() && s.n >= s.goal) { s.n = 0; s.goal = this.goal(); this.later('count'); }
     this.save(s);
   },
-  // 啟動時呼叫：上次打開是 POP_AWAY_DAYS 天以前就考一題
+  // 啟動時呼叫：上次打開是 POP_AWAY_DAYS 天以前就考一組
   start() {
     if (window.AppLangs && AppLangs.welcome) return AppLangs.afterWelcome(() => this.start());
     const s = this.state(), t = today();
     const away = s.last && s.last < t ? Math.round((new Date(t) - new Date(s.last)) / 864e5) : 0;
-    s.last = t; this.save(s);
-    if (this.every() && away >= POP_AWAY_DAYS) this.later('away', away);
+    s.last = t; if (!s.goal) s.goal = this.goal(); this.save(s);
+    if (this.on() && away >= POP_AWAY_DAYS) this.later('away', away);
   },
   // 等目前這題的對錯顯示一下再跳；有東西開著就晚點再試（最多試 20 次）
   later(why, days, tries = 0) {
@@ -8734,33 +8745,86 @@ const Pop = {
       this.show(why, days);
     }, tries ? 3000 : 1500);
   },
+  // 這一組的三題
+  plan() {
+    const ws = this.pick(3); if (!ws.length) return [];
+    const P = PAGE.pop, canRead = w => !!(P.readQ && P.readQ(w));
+    // 讀音題：第 2、3 個字有漢字就用它（和填空的字互換），不然從其他候選字找一個
+    let rw = null;
+    if (canRead(ws[1])) rw = ws[1];
+    else if (canRead(ws[2])) { rw = ws[2]; ws[2] = ws[1]; }
+    else rw = this.pick(8).find(w => w !== ws[0] && canRead(w)) || null;
+    return [
+      { kind: 'mc', w: ws[0], mode: P.mode },
+      rw ? { kind: 'read', w: rw } : { kind: 'mc', w: ws[1], mode: P.rev },
+      { kind: 'fill', w: ws[2] }
+    ];
+  },
   show(why, days) {
-    const w = this.pick(); if (!w) return;
-    const W = PAGE.mc.word, mode = PAGE.pop.mode;
-    const title = why === 'away' ? '好久不見！先考你一題' : '突然考你一題！';
-    const sub = why === 'away' ? `你已經 ${days} 天沒來練習了，看看還記不記得這個字。` : `已經練了 ${this.every()} 題，來一題突擊測驗。`;
-    const el = Sheet.open(title, `<p class="meta pop-sub">${esc(sub)}</p><div id="popq"></div><div class="meta pop-note">可以在「單字庫 → 設定 → 練習」調整多久考一次或關掉。</div>`, title);
+    const qs = this.plan(); if (!qs.length) return;
+    const title = why === 'away' ? '好久不見！先考你一組' : '突擊測驗！';
+    const sub = why === 'away' ? `你已經 ${days} 天沒來練習了，看看還記不記得這些字。` : '兩題選擇、一題填空，考考你學過的字。';
+    const el = Sheet.open(title, `<p class="meta pop-sub">${esc(sub)}</p><div class="pop-step" id="popStep"></div><div id="popq"></div><div class="meta pop-note">可以在「單字庫 → 設定 → 練習」關掉突擊測驗。</div>`, title);
     el.classList.add('pop-sheet');
-    const host = $('#popq', el);
+    const host = $('#popq', el), stepEl = $('#popStep', el);
     const prev = Quiz.active;   // 原本分頁上的題目：關掉後鍵盤操作要接回去
-    const done = () => { if (Quiz.active && Quiz.active.host === host) Quiz.active = prev; };
+    // 填空用固定的 id，同時只能有一題：考填空前先清掉填空分頁，關掉後再畫回來（作答過的會接著下一題）
+    const fillTab = $('#tab-fill');
+    let cleared = false, right = 0, i = 0, closed = false;
+    this.active = true;
+    const done = () => {
+      if (closed) return; closed = true;
+      this.active = false;
+      document.body.classList.remove('typing');
+      if (Quiz.active && Quiz.active.host === host) Quiz.active = prev;
+      if (cleared && !fillTab.hidden) renderFill();
+    };
     const close = () => { done(); Sheet.close(); };
-    const opts = shuffle([w, ...W.distractors(w, mode)]);
-    renderChoice(host, {
-      head: '',
-      promptHTML: W.prompt(w, mode),
-      options: opts.map(o => Object.assign(W.option(o, mode), { correct: o.id === w.id })),
-      onAnswer: ok => {
-        record(w, 'mc', ok, getRec(w.id).s === 'learned' ? 'learned' : 'learn');
-        // 「下一題」在這裡是「繼續練習」（按鈕在 onAnswer 之後才畫出來）
-        Promise.resolve().then(() => { const b = $('[data-next]', host); if (b) b.textContent = '繼續練習'; });
-      },
-      afterHTML: () => W.after(w),
-      noAuto: true
-    }, close);
-    // 用叉叉或點旁邊關掉時也把鍵盤操作接回原本的題目
+    const R = { queue: qs, idx: 0, total: qs.length, right: 0, done: false };
+    const isLast = () => i === qs.length - 1;
+    // 答完一題：最後一題的按鈕改成「繼續練習」並顯示這一組的成績（按鈕在作答之後才畫出來，所以等一下）
+    const answered = ok => {
+      if (ok) right++;
+      Promise.resolve().then(() => {
+        if (!isLast()) return;
+        const b = $('[data-next]', host) || $('#fillGo', host);
+        if (b) b.textContent = '繼續練習';
+        stepEl.textContent = `這一組答對 ${right}／${qs.length} 題`;
+      });
+    };
+    const step = () => {
+      if (i >= qs.length) return close();
+      R.idx = i; R.done = false; R.right = 0;
+      stepEl.textContent = `第 ${i + 1} 題／共 ${qs.length} 題`;
+      const q = qs[i], w = q.w, rec = getRec(w.id);
+      const go = () => { i++; step(); };
+      if (q.kind === 'fill') {
+        if (fillTab && fillTab.innerHTML.trim()) { fillTab.innerHTML = ''; cleared = true; }
+        const src = rec.s === 'learned' && rec.due && rec.due <= today() ? 'due' : 'learn';
+        fillQuestion(host, w, R, src, go);
+        $$('.qhead', host).forEach(x => x.remove());
+        const after = $('#fillAfter', host);
+        const mo = new MutationObserver(() => { if (R.done) { mo.disconnect(); answered(R.right > 0); } });
+        mo.observe(after, { childList: true });
+        return;
+      }
+      const src = rec.s === 'learned' ? 'learned' : 'learn';
+      const W = PAGE.mc.word;
+      const spec = q.kind === 'read' ? PAGE.pop.readQ(w) : null;
+      const opts = spec ? null : shuffle([w, ...W.distractors(w, q.mode)]);
+      renderChoice(host, {
+        head: '',
+        promptHTML: spec ? spec.prompt : W.prompt(w, q.mode),
+        options: spec ? spec.options : opts.map(o => Object.assign(W.option(o, q.mode), { correct: o.id === w.id })),
+        onAnswer: ok => { record(w, 'mc', ok, src); answered(ok); },
+        afterHTML: () => spec ? spec.after : W.after(w),
+        noAuto: isLast()
+      }, go);
+      if (!spec && W.speak) W.speak(w, q.mode);
+    };
+    step();
+    // 用叉叉或點旁邊關掉時也把狀態接回去
     const watch = setInterval(() => { if (!Sheet.isOpen() || !document.contains(host)) { clearInterval(watch); done(); } }, 300);
-    if (W.speak) W.speak(w, mode);
   }
 };
 
