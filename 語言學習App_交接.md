@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v119'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v120'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -132,6 +132,9 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **日文填空標出要填的形**（2026-11-15 使用者回報：「今朝はとても寒かったです」只看中文不知道要填過去式）：答案不是原形時，中文翻譯後面加藍色的「（過去式）」「（ます形・禮貌）」「（て形）」…。規則在 ja/engine.js 的 `fillFormTag(w)`（用 verbForms／adjForms 找答案是哪個形，`FILL_FORM_TAGS` 對應成標示；找不到就標「變化形」）。新測試 `n5src/ja/form-test.js`（已加進 test-all.js）：746 題都要找得到是哪個形。其他語言的填空還沒有這個標示。
+- **上方「今日 x/目標」修截斷**：做完目標時（例如 16/10 ✓）在 400px 以下藏起「題」（`.gunit`，#goalText 加 .done）；`.goal` 至少 96px，English 介面 430px 以下藏起品牌的「Japanese」（原本 English 的今日題數只剩 13px 寬）。
 
 - **動詞變化小提醒＋題目置中**（2026-11-14～15 使用者要求，全部語言）：字卡、單選、填空分頁題目下面空白很多時，在空白處最下面（靠近底部分頁）放一小段「動詞變化」；放不下或設定關掉時，題目放在畫面中間。
   - 經過：先做「題目靠下、上面放大張文法提醒卡」→ 使用者覺得題目在下面不習慣、卡片太搶眼 → 改成題目在上、下面一小段淡色文法提醒 → 使用者覺得放動詞變化比較好、沒放提醒的就置中 → 現在這樣。

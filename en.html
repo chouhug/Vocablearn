@@ -86,13 +86,14 @@ mark.me{border-top-right-radius:4px;border-bottom-right-radius:4px;padding-right
 /* 頂部 */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;gap:10px;padding-block:8px}
-.brand{font-weight:700;font-size:15px;white-space:nowrap}
+.brand{font-weight:700;font-size:15px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .brand b{font-family:var(--font-kana);font-weight:600;color:var(--pri);margin-right:2px}
-.goal{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.goal{flex:1;min-width:96px;display:flex;flex-direction:column;gap:3px}
 .goal span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .goal-row{display:flex;align-items:center;gap:6px;min-width:0}
 .goal-row #goalText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-@media (max-width:399px){.goal-row .gpre{display:none}}
+@media (max-width:399px){.goal-row .gpre{display:none}.goal-row #goalText.done .gunit{display:none}}
+.ftag{color:var(--pri);font-weight:700}
 .goal #goalText span{font-size:inherit}
 /* 連勝（shared/streak.js） */
 .streak{display:inline-flex;align-items:center;gap:2px;flex:none;border:0;background:none;padding:2px 4px;margin:-2px 0;border-radius:8px;color:var(--muted);font:inherit;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;--flame-in:var(--bg)}
@@ -393,6 +394,7 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .toast.goal{background:var(--pri);color:var(--pri-ink);font-weight:700}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:380px){.brand .full{display:none}}
+@media (max-width:430px){:root[lang^="en"] .brand .full{display:none}}   /* English 的「Japanese」比較長 */
 
 /* ===== 按鈕：鍵帽質感（底部有一條較深的邊，按下去會往下沉） ===== */
 .btn,.opt,.chip,.pill,.play,.iconbtn,.kc,.entry button,.seg{transition:transform .08s ease,box-shadow .08s ease,background-color .15s,border-color .15s}
@@ -911,7 +913,7 @@ body.hide-gen .sent{line-height:1.75}
 </head><body>
 <header class="top"><div class="wrap">
   <div class="brand"><b>Aa</b><span class="full">英文 </span>B2</div>
-  <div class="goal"><div class="goal-row"><span id="goalText" aria-live="polite"><span class="gpre">今日 </span>0/20 題</span><button class="streak" id="streakBtn" aria-label="連勝"></button></div><div class="bar"><i id="goalBar"></i></div></div>
+  <div class="goal"><div class="goal-row"><span id="goalText" aria-live="polite"><span class="gpre">今日 </span>0/20<span class="gunit"> 題</span></span><button class="streak" id="streakBtn" aria-label="連勝"></button></div><div class="bar"><i id="goalBar"></i></div></div>
   <button class="iconbtn furibtn" id="genBtn" aria-pressed="true" aria-label="名詞上的性別標示" title="名詞上的性別：開"></button>
   <button class="iconbtn" id="themeBtn" aria-label="外觀"></button>
 </div></header>
@@ -3855,7 +3857,7 @@ const D = {
 '突擊測驗': 'Pop quiz', '突擊測驗！': 'Pop quiz!', '好久不見！先考你一組': 'Long time no see! Quick quiz first', '繼續練習': 'Keep practicing',
 '兩題選擇、一題填空，考考你學過的字。': 'Two multiple-choice questions and one fill-in on words you have studied.',
 '可以在「單字庫 → 設定 → 練習」關掉突擊測驗。': 'You can turn pop quizzes off in Words → Settings → Practice.', '突擊測驗：關閉': 'Pop quiz: off', '突擊測驗：開': 'Pop quiz: on',
-'動詞變化': 'Verb forms', '看更多 ›': 'More ›', '題目下面的動詞變化': 'Verb forms below questions', '顯示': 'Show', '不顯示（題目放中間）': 'Hide (center the question)', '字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。': 'When there is room below a card, choice or fill-in question, show the forms of a verb you have studied.', '動詞變化：不顯示': 'Verb forms: hidden', '動詞變化：顯示': 'Verb forms: shown', '連勝': 'Streak', '今日': 'Today', '每日目標': 'Daily goal', '有練': 'Practiced', '休息日': 'Rest day', '沒練': 'Missed', '天': 'days', '休': 'R',
+'動詞變化': 'Verb forms', '看更多 ›': 'More ›', '題目下面的動詞變化': 'Verb forms below questions', '顯示': 'Show', '不顯示（題目放中間）': 'Hide (center the question)', '字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。': 'When there is room below a card, choice or fill-in question, show the forms of a verb you have studied.', '動詞變化：不顯示': 'Verb forms: hidden', '動詞變化：顯示': 'Verb forms: shown', '連勝': 'Streak', '（ます形・禮貌）': '(-masu form, polite)', '（否定・禮貌）': '(negative, polite)', '（過去否定・禮貌）': '(past negative, polite)', '（過去式・禮貌）': '(past, polite)', '（ましょう：…吧）': '(-mashou, let’s…)', '（ませんか：邀請）': '(-masen ka, invitation)', '（〜たい：想要）': '(-tai, want to)', '（ます形＋に：去做…）': '(masu stem + ni, go to do…)', '（て形）': '(te-form)', '（ています：正在…）': '(-te imasu, …ing)', '（ていました）': '(-te imashita)', '（ていません：還沒…）': '(-te imasen, not yet)', '（てください：請…）': '(-te kudasai, please…)', '（てもいいですか）': '(-te mo ii desu ka)', '（ても）': '(-te mo)', '（過去式・た形）': '(past, ta-form)', '（たり）': '(-tari)', '（否定・ない形）': '(negative, nai-form)', '（ないでください：請不要…）': '(-nai de kudasai, please don’t)', '（ないで）': '(-nai de)', '（なくて）': '(-nakute)', '（ます形去掉ます）': '(masu stem)', '（ない形去掉ない）': '(nai stem)', '（て形的一部分）': '(part of te-form)', '（過去否定）': '(past negative)', '（過去式）': '(past)', '（副詞形：…く）': '(adverb, -ku)', '（否定）': '(negative)', '（〜くなりました：變得…）': '(-ku narimashita, became…)', '（變化形）': '(conjugated form)', '今日': 'Today', '題': '', '每日目標': 'Daily goal', '有練': 'Practiced', '休息日': 'Rest day', '沒練': 'Missed', '天': 'days', '休': 'R',
 '一': 'M', '二': 'T', '三': 'W', '四': 'T', '五': 'F', '六': 'S', '日': 'S',
 '最近五週的練習紀錄': 'Practice over the last five weeks', '休息日：可以用（漏練一天連勝不會斷）': 'Rest day: available (missing one day won’t break your streak)', '三題做完才會回到原本的練習': 'Finish all three to get back to your practice', '準備一下…': 'Get ready…', '開始作答': 'Start',
 '到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。': 'When many words are due, the most overdue come first; whatever you don’t finish today carries over. A wrong answer drops a word two levels instead of starting over.',
@@ -5181,8 +5183,9 @@ function applyTheme() {
 function renderGoal() {
   const n = S.days[today()] || 0;
   const g = goalN();
-  // 手機很窄時（base.css）藏起「今日」，留位置給連勝
-  $('#goalText').innerHTML = `<span class="gpre">今日 </span>${n}/${g} 題${n >= g ? ' ✓' : ''}`;
+  // 手機很窄時（base.css）藏起「今日」，做完目標時也藏起「題」，留位置給連勝
+  $('#goalText').innerHTML = `<span class="gpre">今日 </span>${n}/${g}<span class="gunit"> 題</span>${n >= g ? ' ✓' : ''}`;
+  $('#goalText').classList.toggle('done', n >= g);
   $('#goalBar').style.width = Math.min(100, n / g * 100) + '%';
   renderStreak();
 }
