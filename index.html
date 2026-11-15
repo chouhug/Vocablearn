@@ -84,13 +84,14 @@ mark.me{border-top-right-radius:4px;border-bottom-right-radius:4px;padding-right
 /* 頂部 */
 .top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
 .top .wrap{display:flex;align-items:center;gap:10px;padding-block:8px}
-.brand{font-weight:700;font-size:15px;white-space:nowrap}
+.brand{font-weight:700;font-size:15px;white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis}
 .brand b{font-family:var(--font-kana);font-weight:600;color:var(--pri);margin-right:2px}
-.goal{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.goal{flex:1;min-width:96px;display:flex;flex-direction:column;gap:3px}
 .goal span{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
 .goal-row{display:flex;align-items:center;gap:6px;min-width:0}
 .goal-row #goalText{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-@media (max-width:399px){.goal-row .gpre{display:none}}
+@media (max-width:399px){.goal-row .gpre{display:none}.goal-row #goalText.done .gunit{display:none}}
+.ftag{color:var(--pri);font-weight:700}
 .goal #goalText span{font-size:inherit}
 /* 連勝（shared/streak.js） */
 .streak{display:inline-flex;align-items:center;gap:2px;flex:none;border:0;background:none;padding:2px 4px;margin:-2px 0;border-radius:8px;color:var(--muted);font:inherit;font-size:13px;font-weight:700;font-variant-numeric:tabular-nums;cursor:pointer;--flame-in:var(--bg)}
@@ -391,6 +392,7 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .toast.goal{background:var(--pri);color:var(--pri-ink);font-weight:700}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 @media (max-width:380px){.brand .full{display:none}}
+@media (max-width:430px){:root[lang^="en"] .brand .full{display:none}}   /* English 的「Japanese」比較長 */
 
 /* ===== 按鈕：鍵帽質感（底部有一條較深的邊，按下去會往下沉） ===== */
 .btn,.opt,.chip,.pill,.play,.iconbtn,.kc,.entry button,.seg{transition:transform .08s ease,box-shadow .08s ease,background-color .15s,border-color .15s}
@@ -723,7 +725,7 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 </head><body>
 <header class="top"><div class="wrap">
   <div class="brand"><b>あ</b><span class="full">日語 </span>N5</div>
-  <div class="goal"><div class="goal-row"><span id="goalText" aria-live="polite"><span class="gpre">今日 </span>0/20 題</span><button class="streak" id="streakBtn" aria-label="連勝"></button></div><div class="bar"><i id="goalBar"></i></div></div>
+  <div class="goal"><div class="goal-row"><span id="goalText" aria-live="polite"><span class="gpre">今日 </span>0/20<span class="gunit"> 題</span></span><button class="streak" id="streakBtn" aria-label="連勝"></button></div><div class="bar"><i id="goalBar"></i></div></div>
   <button class="iconbtn furibtn" id="furiBtn" aria-pressed="true" title="漢字上的假名：開"><ruby>漢<rt>かな</rt></ruby></button>
   <button class="iconbtn" id="romajiBtn" aria-pressed="false" title="顯示羅馬拼音">Aa</button>
   <button class="iconbtn" id="themeBtn" aria-label="外觀"></button>
@@ -2236,6 +2238,27 @@ function verbForms(w, cls) {
   if (hasK) { out.push([M, '連用形']); out.push([N, '未然形（接ない等）']); out.push([T.slice(0, -1), 'て形的一部分']); }
   return out;
 }
+// 填空的答案不是原形時，標出要填哪個形（例：寒かった →「過去式」）。找不到對應的形就回傳「變化形」，是原形就回傳空字串。
+const FILL_FORM_TAGS = [
+  [/^原形/, ''], [/^ます形：/, 'ます形・禮貌'], [/^ます形否定/, '否定・禮貌'], [/^ます形過去否定/, '過去否定・禮貌'], [/^ます形過去：/, '過去式・禮貌'],
+  [/^…吧/, 'ましょう：…吧'], [/^要不要/, 'ませんか：邀請'], [/^想要/, '〜たい：想要'], [/^ます形＋に/, 'ます形＋に：去做…'],
+  [/^て形：/, 'て形'], [/^ています/, 'ています：正在…'], [/^ていました/, 'ていました'], [/^ていません/, 'ていません：還沒…'], [/^てください/, 'てください：請…'],
+  [/^てもいいですか/, 'てもいいですか'], [/^ても$/, 'ても'], [/^た形/, '過去式・た形'], [/^たり/, 'たり'],
+  [/^ない形|^否定$/, '否定・ない形'], [/^ないでください/, 'ないでください：請不要…'], [/^ないで/, 'ないで'], [/^なくて/, 'なくて'],
+  [/^連用形/, 'ます形去掉ます'], [/^未然形/, 'ない形去掉ない'], [/^て形的一部分/, 'て形的一部分'],
+  [/^過去否定/, '過去否定'], [/^過去：/, '過去式'], [/^副詞形/, '副詞形：…く'], [/^否定：/, '否定'], [/^變得/, '〜くなりました：變得…']
+];
+function fillFormTag(w) {
+  if (!w.ans || w.ans === w.word || w.ansR === w.reading) return '';
+  let forms = [];
+  if (w.pg === '動詞') { const cls = (w.pos.match(/[一二三]類/) || [''])[0]; forms = verbForms(w.word, cls).concat(verbForms(w.reading, cls)); }
+  else if (w.pg === 'い形容詞') forms = adjForms(w.word).concat(adjForms(w.reading));
+  else return '';
+  const hit = forms.find(([f]) => f === w.ans || f === w.ansR);
+  if (!hit) return '變化形';
+  const t = FILL_FORM_TAGS.find(([re]) => re.test(hit[1]));
+  return t ? t[1] : '變化形';
+}
 function adjForms(w) {
   const out = [[w, '原形']];
   if (w === 'いい') return out.concat([['よかった', '過去：（那時）很好'], ['よく', '副詞形'], ['よくない', '否定：不好']]);
@@ -2904,7 +2927,7 @@ const D = {
 '突擊測驗': 'Pop quiz', '突擊測驗！': 'Pop quiz!', '好久不見！先考你一組': 'Long time no see! Quick quiz first', '繼續練習': 'Keep practicing',
 '兩題選擇、一題填空，考考你學過的字。': 'Two multiple-choice questions and one fill-in on words you have studied.',
 '可以在「單字庫 → 設定 → 練習」關掉突擊測驗。': 'You can turn pop quizzes off in Words → Settings → Practice.', '突擊測驗：關閉': 'Pop quiz: off', '突擊測驗：開': 'Pop quiz: on',
-'動詞變化': 'Verb forms', '看更多 ›': 'More ›', '題目下面的動詞變化': 'Verb forms below questions', '顯示': 'Show', '不顯示（題目放中間）': 'Hide (center the question)', '字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。': 'When there is room below a card, choice or fill-in question, show the forms of a verb you have studied.', '動詞變化：不顯示': 'Verb forms: hidden', '動詞變化：顯示': 'Verb forms: shown', '連勝': 'Streak', '今日': 'Today', '每日目標': 'Daily goal', '有練': 'Practiced', '休息日': 'Rest day', '沒練': 'Missed', '天': 'days', '休': 'R',
+'動詞變化': 'Verb forms', '看更多 ›': 'More ›', '題目下面的動詞變化': 'Verb forms below questions', '顯示': 'Show', '不顯示（題目放中間）': 'Hide (center the question)', '字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。': 'When there is room below a card, choice or fill-in question, show the forms of a verb you have studied.', '動詞變化：不顯示': 'Verb forms: hidden', '動詞變化：顯示': 'Verb forms: shown', '連勝': 'Streak', '（ます形・禮貌）': '(-masu form, polite)', '（否定・禮貌）': '(negative, polite)', '（過去否定・禮貌）': '(past negative, polite)', '（過去式・禮貌）': '(past, polite)', '（ましょう：…吧）': '(-mashou, let’s…)', '（ませんか：邀請）': '(-masen ka, invitation)', '（〜たい：想要）': '(-tai, want to)', '（ます形＋に：去做…）': '(masu stem + ni, go to do…)', '（て形）': '(te-form)', '（ています：正在…）': '(-te imasu, …ing)', '（ていました）': '(-te imashita)', '（ていません：還沒…）': '(-te imasen, not yet)', '（てください：請…）': '(-te kudasai, please…)', '（てもいいですか）': '(-te mo ii desu ka)', '（ても）': '(-te mo)', '（過去式・た形）': '(past, ta-form)', '（たり）': '(-tari)', '（否定・ない形）': '(negative, nai-form)', '（ないでください：請不要…）': '(-nai de kudasai, please don’t)', '（ないで）': '(-nai de)', '（なくて）': '(-nakute)', '（ます形去掉ます）': '(masu stem)', '（ない形去掉ない）': '(nai stem)', '（て形的一部分）': '(part of te-form)', '（過去否定）': '(past negative)', '（過去式）': '(past)', '（副詞形：…く）': '(adverb, -ku)', '（否定）': '(negative)', '（〜くなりました：變得…）': '(-ku narimashita, became…)', '（變化形）': '(conjugated form)', '今日': 'Today', '題': '', '每日目標': 'Daily goal', '有練': 'Practiced', '休息日': 'Rest day', '沒練': 'Missed', '天': 'days', '休': 'R',
 '一': 'M', '二': 'T', '三': 'W', '四': 'T', '五': 'F', '六': 'S', '日': 'S',
 '最近五週的練習紀錄': 'Practice over the last five weeks', '休息日：可以用（漏練一天連勝不會斷）': 'Rest day: available (missing one day won’t break your streak)', '三題做完才會回到原本的練習': 'Finish all three to get back to your practice', '準備一下…': 'Get ready…', '開始作答': 'Start',
 '到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。': 'When many words are due, the most overdue come first; whatever you don’t finish today carries over. A wrong answer drops a word two levels instead of starting over.',
@@ -5382,8 +5405,9 @@ function applyTheme() {
 function renderGoal() {
   const n = S.days[today()] || 0;
   const g = goalN();
-  // 手機很窄時（base.css）藏起「今日」，留位置給連勝
-  $('#goalText').innerHTML = `<span class="gpre">今日 </span>${n}/${g} 題${n >= g ? ' ✓' : ''}`;
+  // 手機很窄時（base.css）藏起「今日」，做完目標時也藏起「題」，留位置給連勝
+  $('#goalText').innerHTML = `<span class="gpre">今日 </span>${n}/${g}<span class="gunit"> 題</span>${n >= g ? ' ✓' : ''}`;
+  $('#goalText').classList.toggle('done', n >= g);
   $('#goalBar').style.width = Math.min(100, n / g * 100) + '%';
   renderStreak();
 }
@@ -6731,7 +6755,7 @@ const PAGE = {
     <div class="sent" lang="ja" id="fillSent" style="margin-top:8px">${rubyHTML(w.segs, { toks: toksOf(w), blank: { a0: w.a0, a1: w.a1, html: `<span class="blank" id="blank">${blankEmpty}</span>` } })}</div>
     ${romajiLine((preRom + ' ____ ' + postRom).trim())}
     <div class="hint" style="margin-top:8px">
-      <span>${esc(w.sentZh)}</span>
+      <span>${esc(w.sentZh)}${(t => t ? ` <b class="ftag">（${esc(t)}）</b>` : '')(fillFormTag(w))}</span>
       ${len > 1 ? `<span class="meta" id="fillHint"${SET.fillHint === 'show' ? '' : ' hidden'}>提示：第一個假名是 <b style="color:var(--fg)">${esc(w.ansR[0])}</b>，共 ${len} 個假名</span>` : ''}
     </div>
     <form class="answerrow" id="fillForm" style="margin-top:12px" autocomplete="off">
