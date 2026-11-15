@@ -706,13 +706,21 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .dict-en[open]{display:flex}
 .dict-auto{color:var(--fg)}
 
-/* 文法小提醒（shared/gram-tip.js）：題目下面的空白處，靠近底部分頁的一小段淡色文字 */
-.gtip-slot{display:flex;flex-direction:column;justify-content:flex-end;flex:none;overflow:hidden}
-.gtip-slot[hidden]{display:none}
-.gtip{font-size:13px;line-height:1.6;color:var(--muted);padding:6px 10px 6px 12px;border-left:3px solid var(--pri-mid);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px)}
-.gtip-h{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85}
-.gtip-t{color:var(--fg);font-weight:600;margin-right:6px}
-.gtip-more{border:0;background:none;color:var(--pri);font:inherit;font-weight:600;padding:2px 0 2px 6px;cursor:pointer;white-space:nowrap}
+/* 動詞變化小提醒（shared/verb-tip.js）：題目下面的空白處，靠近底部分頁 */
+.vtip-slot{display:flex;flex-direction:column;justify-content:flex-end;flex:none;overflow:hidden}
+.vtip-slot[hidden]{display:none}
+.vtip{font-size:13px;line-height:1.5;color:var(--muted);padding:8px 12px;border-left:3px solid var(--pri-mid);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(2px);-webkit-backdrop-filter:blur(2px);display:flex;flex-direction:column;gap:4px}
+.vtip-h{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.vtip-h span{font-size:11px;font-weight:700;letter-spacing:.04em;opacity:.85}
+.vtip-more{border:0;background:none;color:var(--pri);font:inherit;font-weight:600;padding:2px 0;cursor:pointer;white-space:nowrap}
+.vtip-w{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px}
+.vtip-w b{color:var(--fg);font-size:16px}
+.vtip-tag{font-size:11px;border:1px solid var(--edge);border-radius:6px;padding:0 5px}
+.vtip-tag:empty{display:none}
+.vtip-fs{display:flex;flex-wrap:wrap;gap:2px 14px}
+.vtip-f{white-space:nowrap}
+.vtip-f i{font-style:normal;font-size:11px;opacity:.8}
+.vtip-f span{color:var(--fg);font-weight:600}
 
 /* 語言頁（義大利文、西班牙文、德文、俄文…）：沿用日文 App 的樣式（建置時從 ../index.html 抽出），這裡只補語言頁需要的部分 */
 :root{--font-ja:var(--font-ui);--font-kana:var(--font-ui)}
@@ -3490,7 +3498,7 @@ const D = {
 '突擊測驗': 'Pop quiz', '突擊測驗！': 'Pop quiz!', '好久不見！先考你一組': 'Long time no see! Quick quiz first', '繼續練習': 'Keep practicing',
 '兩題選擇、一題填空，考考你學過的字。': 'Two multiple-choice questions and one fill-in on words you have studied.',
 '可以在「單字庫 → 設定 → 練習」關掉突擊測驗。': 'You can turn pop quizzes off in Words → Settings → Practice.', '突擊測驗：關閉': 'Pop quiz: off', '突擊測驗：開': 'Pop quiz: on',
-'文法小提醒': 'Grammar tip', '看說明 ›': 'Details ›', '連勝': 'Streak', '今日': 'Today', '每日目標': 'Daily goal', '有練': 'Practiced', '休息日': 'Rest day', '沒練': 'Missed', '天': 'days', '休': 'R',
+'動詞變化': 'Verb forms', '看更多 ›': 'More ›', '題目下面的動詞變化': 'Verb forms below questions', '顯示': 'Show', '不顯示（題目放中間）': 'Hide (center the question)', '字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。': 'When there is room below a card, choice or fill-in question, show the forms of a verb you have studied.', '動詞變化：不顯示': 'Verb forms: hidden', '動詞變化：顯示': 'Verb forms: shown', '連勝': 'Streak', '今日': 'Today', '每日目標': 'Daily goal', '有練': 'Practiced', '休息日': 'Rest day', '沒練': 'Missed', '天': 'days', '休': 'R',
 '一': 'M', '二': 'T', '三': 'W', '四': 'T', '五': 'F', '六': 'S', '日': 'S',
 '最近五週的練習紀錄': 'Practice over the last five weeks', '休息日：可以用（漏練一天連勝不會斷）': 'Rest day: available (missing one day won’t break your streak)', '三題做完才會回到原本的練習': 'Finish all three to get back to your practice', '準備一下…': 'Get ready…', '開始作答': 'Start',
 '到期的字很多時，先出到期最久的；今天沒做到的明天接著做。答錯一次只降兩級，不會整個重來。': 'When many words are due, the most overdue come first; whatever you don’t finish today carries over. A wrong answer drops a word two levels instead of starting over.',
@@ -6091,7 +6099,7 @@ const ORDER = (() => {
 let S = store.get('n5:progress', null);
 if (!S || typeof S !== 'object' || !S.items) S = { items: {}, days: {} };
 S.days = S.days || {};
-const SET = Object.assign({ vib: 'on', sfx: 'on', round: 20, pop: 'on', goal: 20, recent: 'd1', mean: 'zh', theme: 'system', rate: 0.9 }, store.get('n5:settings', {}));
+const SET = Object.assign({ vib: 'on', sfx: 'on', round: 20, pop: 'on', goal: 20, vtip: 'on', recent: 'd1', mean: 'zh', theme: 'system', rate: 0.9 }, store.get('n5:settings', {}));
 // ================= 介面語言（中文／English；日文頁和語言頁共用：n5src/shared/i18n.js） =================
 // 程式裡的介面文字都寫中文；選 English 時，畫面上的中文由對照表（I18N.en：i18n-ui.js、ja/i18n.js、lang-i18n.js、各語言的 i18n.js）即時換成英文。
 // 學的語言（有 lang="ja"、lang="it"… 的區塊，或 class="ja"）不會動。換語言時重新載入頁面，避免中英混雜。
@@ -6658,7 +6666,7 @@ function showTab(t) {
   Quiz.active = null; Sheet.close();
   ({ pron: renderPron, mc: renderMC, card: renderCard, fill: renderFill, gram: renderGram, lib: renderLib })[t]();
   window.scrollTo(0, 0);
-  GramTip.tab();   // 字卡、單選、填空：題目靠下，上面放文法小提醒（shared/gram-tip.js）
+  VerbTip.tab();   // 字卡、單選、填空：題目下面放動詞變化，放不下就置中（shared/verb-tip.js）
 }
 $$('.tabbar button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 $('#themeBtn').onclick = () => { SET.theme = SET.theme === 'dark' ? 'light' : 'dark'; saveSet(); applyTheme(); };
@@ -7313,77 +7321,95 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-gram]');
   if (b) { e.preventDefault(); openGram(b.dataset.gram); }
 });
-// ================= 文法小提醒（日文頁和語言頁共用：n5src/shared/gram-tip.js） =================
+// ================= 動詞變化小提醒＋題目置中（日文頁和語言頁共用：n5src/shared/verb-tip.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
-// 字卡、單選、填空分頁的內容不多時，題目和底部分頁之間會空一大塊：在分頁最後面放一個 .gtip-slot 撐滿這塊空白，
-// 最下面（靠近底部分頁）放一小段淡色的「文法小提醒」（從已過關的文法和下一個要學的文法裡抽）；放不下就不放。
-// 題目照常在上面，slot 在題目下面，所以重新排版時題目不會移動：內容一變（答完出現說明、換題、換分頁、轉螢幕）就重新算。
-// 各頁要給 PAGE.gram.tip(id) → { sent: 例句 HTML, zh: 例句中文, plain: 白話說明 }（沒有範例就回傳 null）。
-const GramTip = {
+// 字卡、單選、填空分頁的內容不多時，題目和底部分頁之間會空一大塊：
+//   - 放得下：在分頁最後面放一個 .vtip-slot 撐滿空白，最下面（靠近底部分頁）放一小段「動詞變化」，題目照常在上面。
+//   - 放不下或設定關掉（SET.vtip === 'off'）：把題目放在中間（分頁上面加 padding-top）。
+// 動詞從「待考」和「已學會」的動詞裡抽（沒有就從常用動詞抽），換分頁時換一個。
+// 什麼時候重新排：換分頁、轉螢幕、內容高度變了；但置中時答完題目（出現說明）內容變長不重排，題目才不會往上跳。
+// 各頁要給 PAGE.vtip = { pick(): 動詞或 null, html(w, short): 變化的 HTML（short＝精簡版）, more(w): 「看更多」按鈕的屬性 }。
+const VerbTip = {
   TABS: ['card', 'mc', 'fill'],
-  id: '', lastH: 0, busy: false,
-  // 換分頁時換一個文法
-  pick() {
-    const path = PAGE.gram.path || [];
-    const ids = path.flatMap(x => x[2]).filter(id => PAGE.gram.tip(id));
-    if (!ids.length) return '';
-    const nx = gxNext(null);
-    const pool = ids.filter(gxPassed).concat(nx && ids.includes(nx) ? [nx] : []);
-    const list = pool.length ? pool : ids.slice(0, 1);
-    return list[Math.floor(Math.random() * list.length)];
-  },
-  html(id) {
-    const t = PAGE.gram.tip(id); if (!t) return '';
-    return `<div class="gtip"><span class="gtip-h">文法小提醒</span><b class="gtip-t">${esc(PAGE.gram.title(id))}</b>${t.plain ? `<span class="gtip-p">${esc(t.plain)}</span>` : ''}<button class="gtip-more" data-gram="${esc(id)}">看說明 ›</button></div>`;
-  },
+  w: null, lastH: 0, busy: false,
+  on() { return SET.vtip !== 'off'; },
   host() { const t = UI.tab; return this.TABS.includes(t) ? $('#tab-' + t) : null; },
-  tab() { this.id = this.pick(); this.lastH = 0; this.layout(); },
-  slotOf(host) { const l = host.lastElementChild; return l && l.classList.contains('gtip-slot') ? l : null; },
-  // 有東西變了：內容高度變了（或 slot 被重畫掉）才重新排
+  slotOf(host) { const l = host.lastElementChild; return l && l.classList.contains('vtip-slot') ? l : null; },
+  html(short) {
+    const w = this.w; if (!w) return '';
+    return `<div class="vtip"><div class="vtip-h"><span>動詞變化</span><button class="vtip-more" ${PAGE.vtip.more(w)}>看更多 ›</button></div>${PAGE.vtip.html(w, short)}</div>`;
+  },
+  // 換分頁時換一個動詞
+  tab() { this.w = this.on() ? PAGE.vtip.pick() : null; this.lastH = 0; this.layout(); },
+  // 內容高度變了才重新排；置中時答完題目變長就不動
   check() {
     const host = this.host(); if (!host || host.hidden || document.body.classList.contains('typing')) return;
     const slot = this.slotOf(host);
-    if (slot && Math.abs(this.contentH(host, slot) - this.lastH) <= 2) return;
+    const h = host.scrollHeight - (slot && !slot.hidden ? slot.offsetHeight + 16 : 0) - (parseFloat(host.style.paddingTop) || 0);
+    if (Math.abs(h - this.lastH) <= 2) return;
+    const answered = (Quiz.active && Quiz.active.answered && host.contains(Quiz.active.host)) || !!host.querySelector('#fillIn[readonly]');
+    if (h > this.lastH && answered && host.style.paddingTop) return;
     this.layout();
   },
-  contentH(host, slot) { return host.scrollHeight - (slot && !slot.hidden ? slot.offsetHeight + 16 : 0); },
   layout() {
     const host = this.host(); if (!host || host.hidden || this.busy) return;
     this.busy = true;
-    // 其他分頁留下的 slot 拿掉（只有目前這個分頁有）
-    $$('.gtip-slot').forEach(x => { if (x.parentNode !== host) x.remove(); });
+    // 其他分頁的 slot、置中拿掉
+    $$('.vtip-slot').forEach(x => { if (x.parentNode !== host) x.remove(); });
+    this.TABS.forEach(t => { const el = $('#tab-' + t); if (el && el !== host) el.style.paddingTop = ''; });
     let slot = this.slotOf(host);
-    if (!slot) { slot = document.createElement('div'); slot.className = 'gtip-slot'; host.append(slot); }
-    slot.innerHTML = ''; slot.style.height = '0px'; slot.hidden = true;
-    const h = host.scrollHeight;   // 沒有 slot 時的內容高度
+    if (!slot) { slot = document.createElement('div'); slot.className = 'vtip-slot'; host.append(slot); }
+    slot.innerHTML = ''; slot.style.height = '0px'; slot.hidden = true; host.style.paddingTop = '';
+    const h = host.scrollHeight;   // 沒有 slot、沒有置中時的內容高度
     this.lastH = h;
     // 底部到畫面底部要留 main 和 .wrap 的 padding-bottom（底部分頁的高度＋間距），剛好不會出現捲動；slot 和內容之間有 flex gap 16px
     const top = host.getBoundingClientRect().top + window.scrollY;
     const main = $('#main'), wrap = main && main.firstElementChild;
     const pad = el => el ? parseFloat(getComputedStyle(el).paddingBottom) || 0 : 0;
-    const free = Math.floor(window.innerHeight - pad(main) - pad(wrap) - top - h - 16);
-    if (free > 40 && this.id) {
-      slot.hidden = false; slot.style.height = free + 'px';
-      slot.innerHTML = this.html(this.id);
-      const c = slot.firstElementChild;
-      if (!c || c.offsetHeight > free) { slot.innerHTML = ''; slot.hidden = true; slot.style.height = '0px'; }
+    const space = Math.floor(window.innerHeight - pad(main) - pad(wrap) - top - h);
+    let placed = false;
+    if (this.on() && this.w && space - 16 > 40) {
+      slot.hidden = false; slot.style.height = (space - 16) + 'px';
+      for (const short of [false, true]) {
+        slot.innerHTML = this.html(short);
+        const c = slot.firstElementChild;
+        if (c && c.offsetHeight <= space - 16) { placed = true; break; }
+      }
+      if (!placed) { slot.innerHTML = ''; slot.hidden = true; slot.style.height = '0px'; }
     }
+    // 沒放提醒：題目放在中間
+    if (!placed && space > 8) host.style.paddingTop = Math.floor(space / 2) + 'px';
     this.busy = false;
   }
 };
 // 內容有變化就檢查（下一個畫面更新前做一次）
 {
   let raf = 0;
-  const later = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; GramTip.check(); }); };
-  new MutationObserver(recs => { if (!GramTip.busy && recs.some(r => !(r.target.closest && r.target.closest('.gtip-slot')))) later(); })
+  const later = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; VerbTip.check(); }); };
+  new MutationObserver(recs => { if (!VerbTip.busy && recs.some(r => !(r.target.closest && r.target.closest('.vtip-slot')))) later(); })
     .observe($('#main'), { childList: true, subtree: true });
   let rt = 0;
-  window.addEventListener('resize', () => { if (document.body.classList.contains('typing')) return; clearTimeout(rt); rt = setTimeout(() => GramTip.layout(), 150); });
+  window.addEventListener('resize', () => { if (document.body.classList.contains('typing')) return; clearTimeout(rt); rt = setTimeout(() => VerbTip.layout(), 150); });
 }
 
 // ================= 單字庫 =================
 // 這一頁和日文頁不一樣的地方（共用的分頁程式用 PAGE.…）
 const PAGE = {
+  // 動詞變化小提醒（shared/verb-tip.js）：現在式六個人稱（精簡版三個）
+  vtip: {
+    pick() {
+      const vs = WORDS.filter(w => !w.custom && isVerbPos(w.pos));
+      const mine = vs.filter(w => { const s = getRec(w.id).s; return s === 'queued' || s === 'learned'; });
+      const pool = mine.length ? mine : vs.slice(0, 40);
+      return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    },
+    html(w, short) {
+      const c = IT.conjugate(w.word, w.pos), P = LC.persons;
+      const fs = c.presentFull.map((f, i) => `<span class="vtip-f"><i>${esc(P[i])}</i> <span lang="${LC.id}">${esc(f)}</span></span>`);
+      return `<div class="vtip-w"><b lang="${LC.id}">${esc(w.word)}</b><span>${meanW(w)}</span><span class="vtip-tag">${esc(c.presTab || '現在式')}</span></div><div class="vtip-fs">${(short ? fs.slice(0, 3) : fs).join('')}</div>`;
+    },
+    more: w => `data-word="${esc(w.id)}"`
+  },
   pop: { key: LP + 'pop', mode: 'it2zh', rev: 'zh2it', readQ: () => null },   // 突擊測驗（shared/pop-quiz.js）
   voice: {
     GOOD: /natural|neural|premium|enhanced|online|google|siri/i,
@@ -7412,8 +7438,6 @@ const PAGE = {
     get path() { return IT.GX_PATH; },
     gx: id => IT.GX && IT.GX[id],
     title: id => { const g = IT.GRAMMAR.find(x => x.id === id); return g ? g.title : ''; },
-    // 文法小提醒（shared/gram-tip.js）：第一個範例
-    tip: id => { const e = IT.GX && IT.GX[id] && IT.GX[id].ex && IT.GX[id].ex[0]; return e ? { sent: `<div class="sent" lang="${LC.id}">${esc(e[0])}</div>`, zh: e[1], plain: e[4] || '' } : null; },
     quizQ([pr, ans, wr, zh, why], id) {
       // 句子結尾的撇號（l'）後面不留空格；標點前面的空格拿掉
       const full = (/'$/.test(ans) ? pr.replace('___ ', ans) : pr).replace('___', ans).replace(/\s+([.,!?…])/g, '$1');
@@ -7692,6 +7716,9 @@ function renderLib() {
           <label class="label" for="goalSel">每日目標</label>
           <select id="goalSel">${GOAL_OPTS.map(n => `<option value="${n}"${goalN() === n ? ' selected' : ''}>${n} 題</option>`).join('')}</select>
           <div class="meta">上方「今日」的目標題數（單選不算）。連勝只要一天做 ${STREAK_MIN} 題就算，跟目標無關。</div>
+          <label class="label" for="vtipSel">題目下面的動詞變化</label>
+          <select id="vtipSel"><option value="on"${VerbTip.on() ? ' selected' : ''}>顯示</option><option value="off"${VerbTip.on() ? '' : ' selected'}>不顯示（題目放中間）</option></select>
+          <div class="meta">字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。</div>
           <label class="label" for="popSel">突擊測驗</label>
           <select id="popSel"><option value="on"${Pop.on() ? ' selected' : ''}>開（每做 ${POP_MIN}～${POP_MAX} 題）</option><option value="off"${Pop.on() ? '' : ' selected'}>關閉</option></select>
           <div class="meta">每做 ${POP_MIN}～${POP_MAX} 題（每次不一定），或隔了 ${POP_AWAY_DAYS} 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。</div>
@@ -7732,6 +7759,7 @@ function renderLib() {
   $('#roundSel').onchange = e => { SET.round = e.target.value === 'all' ? 'all' : Number(e.target.value); saveSet(); mcRound = null; fillRound = null; deck = null; if (P.resetRounds) P.resetRounds(); toast(SET.round === 'all' ? '每輪：全部' : `每輪 ${SET.round} 題`); };
   $('#dueCapSel').onchange = e => { SET.dueCap = e.target.value === 'all' ? 'all' : Number(e.target.value); saveSet(); fillRound = null; toast(SET.dueCap === 'all' ? '到期複習：不限' : `到期複習：每天最多 ${SET.dueCap} 個`); };
   $('#goalSel').onchange = e => { SET.goal = Number(e.target.value); saveSet(); renderGoal(); toast(`每日目標：${SET.goal} 題`); };
+  $('#vtipSel').onchange = e => { SET.vtip = e.target.value; saveSet(); toast(SET.vtip === 'off' ? '動詞變化：不顯示' : '動詞變化：顯示'); };
   $('#popSel').onchange = e => { SET.pop = e.target.value; saveSet(); toast(SET.pop === 'off' ? '突擊測驗：關閉' : '突擊測驗：開'); };
   $('#hintSel').onchange = e => { SET.fillHint = e.target.value; saveSet(); fillRound = null; toast(SET.fillHint === 'show' ? '填空提示：一開始就顯示' : '填空提示：按了才顯示'); };
   $('#recentSet').onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; toast(`最近學過：${recentLabel()}`); renderLib(); };
