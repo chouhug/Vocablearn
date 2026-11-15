@@ -57,10 +57,11 @@ function applyAnswer(rec, mode, correct, source, today, now) {
   rec.n = (rec.n || 0) + 1;
   rec.t = now;
   // w：1＝錯題（現在還不會）、2＝以前錯過（錯題複習會輪流抽）
-  // 答錯 → 錯題；在任何地方答對一次 → 離開錯題，留在錯題複習；錯題複習答錯 → 回到錯題
+  // 答錯 → 錯題；答對一次 → 離開錯題，留在錯題複習；錯題複習答錯 → 回到錯題
+  // 填空例外（2026-11-15 使用者要求）：只有在「填空錯題」答對才離開錯題；在待考、到期複習、突擊測驗答對不會順便清掉錯題
   const w = rec.w[mode] || 0;
   if (!correct) rec.w[mode] = 1;
-  else if (w === 1) rec.w[mode] = 2;
+  else if (w === 1 && (mode !== 'fill' || source === 'wrong')) rec.w[mode] = 2;
   if (!rec.w[mode]) delete rec.w[mode];
   if (source === 'review') { rec.rv = rec.rv || {}; rec.rv[mode] = now; }   // 上次在錯題複習出現的時間，用來輪流抽
   if (source === 'due') rec.dd = today;                                    // 今天做過到期複習（算每日上限）

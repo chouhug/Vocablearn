@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v120'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v121'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -126,12 +126,17 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - **單選不算每日題數**（2026-11-14）：`record()` 的 mode 是 `'mc'` 時不呼叫 bumpDay（只存紀錄）；單選分頁的特殊題型（日文助詞、詞性變化，語言頁冠詞／格與性別、介係詞練習句）也不算。填空、聽寫、五十音、發音練習、文法練習題照常算。
 - 每日題數：`SyncDays`（sync.js）。每台裝置有自己的代號 `n5:dev`，`S.dv[日期][裝置]` 各記各的，`S.days[日期]`＝各裝置加總（和舊數字取大），兩台裝置同一天練不會再算少。`bumpDay()` 用 `SyncDays.bump`，並且會 `Cloud.schedule()`（以前只有題數變動時不會同步）。
 - 複習間隔：1／3／7／14／30／60 天（7 天以上加 ±15% 隨機，避免同一天到期的字擠在一起）。只有填空答對才算「學會」。學會的字答錯降兩級（不是打回第一級）。
-- 錯題（`w[mode]`）：1＝錯題、2＝以前錯過。答錯 → 1；在任何地方答對一次 → 2（離開錯題）；錯題複習答錯 → 回到 1。錯題複習（w＝2）每輪 10 題，依 `rv[mode]`（上次在錯題複習出現的時間）由舊到新抽，同時間的隨機，所以抽過的要等其他字都出過才會再出現。
+- 錯題（`w[mode]`）：1＝錯題、2＝以前錯過。答錯 → 1；在任何地方答對一次 → 2（離開錯題）——**填空例外：只有在「填空錯題」答對才 → 2**，在待考、到期複習、突擊測驗答對不會清掉（2026-11-15）；錯題複習答錯 → 回到 1。錯題複習（w＝2）每輪 10 題，依 `rv[mode]`（上次在錯題複習出現的時間）由舊到新抽，同時間的隨機，所以抽過的要等其他字都出過才會再出現。
 - 到期複習每天有上限 `SET.dueCap`（預設 30，可選 10／20／30／50／不限，設定頁「練習」）。到期最久、等級最低的先出；今天做過的（`dd`＝今天）也算在上限內，沒做完的明天接著出。單字庫「今天到期」顯示的是今天要做的數量。
 - 「已經會了」的字分散在 3～10 天後才第一次複習（原本固定 3 天，一次標很多個會同一天全部到期）。
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **填空錯題不會被順便清掉＋隨機來源不顯示題數**（2026-11-15 使用者要求）：
+  - core.js applyAnswer：填空答錯 → 填空錯題（字還是待考，待考照樣出）；在待考答對會學會，但填空錯題留著，只有在「填空錯題」（source 'wrong'）答對才離開錯題、進錯題複習。單選、聽寫、五十音照舊（在哪裡答對都離開錯題）。core-test.js 加 5 項。
+  - 隨機抽的來源（`RANDOM_SRCS`：mcReview、fillReview、learned、五十音的 review，定義在 shared/mc-tab.js）：題目來源選單不顯示數字（`srcText`），題目上方不顯示「剩 · 共」只留進度條（progressLine 的 data-rnd），字卡也不顯示「剩 · 共」。到期複習、錯題、待考照常顯示。
+  - 測試：`node n5src/review-e2e.js n5work ja it ru`。
 
 - **日文填空標出要填的形**（2026-11-15 使用者回報：「今朝はとても寒かったです」只看中文不知道要填過去式）：答案不是原形時，中文翻譯後面加藍色的「（過去式）」「（ます形・禮貌）」「（て形）」…。規則在 ja/engine.js 的 `fillFormTag(w)`（用 verbForms／adjForms 找答案是哪個形，`FILL_FORM_TAGS` 對應成標示；找不到就標「變化形」）。新測試 `n5src/ja/form-test.js`（已加進 test-all.js）：746 題都要找得到是哪個形。其他語言的填空還沒有這個標示。
 - **上方「今日 x/目標」修截斷**：做完目標時（例如 16/10 ✓）在 400px 以下藏起「題」（`.gunit`，#goalText 加 .done）；`.goal` 至少 96px，English 介面 430px 以下藏起品牌的「Japanese」（原本 English 的今日題數只剩 13px 寬）。
