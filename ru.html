@@ -707,6 +707,9 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .dict-en{display:flex;flex-direction:column;gap:6px}
 .dict-en[open]{display:flex}
 .dict-auto{color:var(--fg)}
+.dict-mean{margin:0;font-size:20px;font-weight:700;text-align:left}
+.dict-rd{font-size:15px;color:var(--muted)}
+.dict-list{margin:0 0 2px;padding-left:22px;display:flex;flex-direction:column;gap:4px;font-size:15px;line-height:1.4}
 
 /* 動詞變化小提醒（shared/verb-tip.js）：題目下面的空白處，靠近底部分頁 */
 .vtip-slot{display:flex;flex-direction:column;justify-content:flex-end;flex:none;overflow:hidden}
@@ -4169,7 +4172,7 @@ const D = {
 '儲存': 'Save', '刪除': 'Delete', '確定刪除？': 'Delete for sure?', '編輯': 'Edit', '已儲存': 'Saved', '已刪除': 'Deleted', '已加到我的單字，並列入考題': 'Added to My words and to your quiz',
 '存好就列入考題。打完單字會自動查字典（Wiktionary、MyMemory），填好的意思可以自己改。': 'Saved words go straight into your quiz. After you type a word, the app looks it up (Wiktionary, MyMemory); you can edit the meaning it fills in.',
 '請輸入單字。': 'Please enter a word.', '請輸入意思（也可以等字典查完自動填）。': 'Please enter a meaning (or wait for the dictionary to fill it in).',
-'連不上字典，意思請自己填。': 'Can’t reach the dictionary — enter the meaning yourself.', '再查一次': 'Try again',
+'連不上字典，意思請自己填。': 'Can’t reach the dictionary — enter the meaning yourself.', '再查一次': 'Try again', '連不上字典。': 'Can’t reach the dictionary.', '字典查到的（不在單字庫裡）': 'From the dictionary (not in the word list)', '中文是機器翻譯，可能不準': 'Chinese is machine-translated and may be inaccurate', '單字庫裡找不到符合的字。': 'No matching words in the word list.', '單字庫裡沒有這個字。': 'This word isn’t in the word list.',
 '中文（機器翻譯，可能不準）': 'Chinese (machine translation, may be inaccurate)', '英文解釋（Wiktionary）': 'English definitions (Wiktionary)',
 '讀音請全部用假名（平假名或片假名）。': 'Write the reading in kana only (hiragana or katakana).',
 '「例句的讀法」和例句對不起來。請把整句用平假名寫一次（片假名和標點照原樣），或先留空。': '“Sentence reading” doesn’t match the sentence. Write the whole sentence in hiragana (keep katakana and punctuation as they are), or leave it empty.',
@@ -4227,6 +4230,9 @@ R(/^「(.+)」在例句裡要是完整的一段（不能切在一個漢字詞的
 R(/^「(.+)」有漢字，填空要知道它怎麼唸：請填「例句的讀法」。$/, '“$1” has kanji, so fill-in needs its reading — please fill in “Sentence reading”.');
 R(/^查字典並把「(.+)」加到我的單字$/, 'Look up “$1” and add it to My words');
 R(/^查字典並加到我的單字$/, 'Look it up and add to My words');
+R(/^把「(.+)」加到我的單字$/, 'Add “$1” to My words');
+R(/^中文：(.+)$/, 'Chinese: $1');
+R(/^字典裡也查不到「(.+)」（可以檢查拼字，或改查原形）。$/, 'Not in the dictionary either: “$1” (check the spelling, or try the base form).');
 R(/^目前是(.+)，點一下切換語言$/, (m, a) => `Current: ${t(a)} — tap to switch language`);
 R(/^今日 (\d+)\/(\d+) 題( ✓)?$/, 'Today $1/$2$3');
 R(/^今天的 (\d+) 題完成了！$/, 'Today’s $1 questions done!');
@@ -7185,8 +7191,10 @@ function openToken(form) {
   const mine = WORDS.filter(w => w.custom && IT.norm(w.word).toLowerCase() === k);
   for (const w of mine) body += `<div class="an tk-an"><div class="grow"><div class="tk-h"><b lang="${LC.id}">${esc(w.title)}</b><span class="pos">${esc(POS_ZH[w.pos])}</span></div><p class="mean-big tk-m">${meanW(w)}</p>
         <button class="btn quiet tk-more" data-word="${esc(w.id)}">看完整說明</button></div></div>`;
-  if (!infos.length && !nm && !mine.length) body += `<p class="meta">找不到這個字。</p><button class="btn quiet" data-addmine="${esc(form)}">查字典並加到我的單字</button>`;
-  Sheet.open('查字', `<div class="rowx tk-top"><div class="grow"><div class="w1" lang="${LC.id}">${esc(form)}</div></div>${iconPlay(form, '播放 ' + form)}</div>${body}`, form);
+  const miss = !infos.length && !nm && !mine.length;
+  if (miss) body += `<p class="meta">單字庫裡沒有這個字。</p><div class="dictbox" id="tkDict"></div>`;
+  const el = Sheet.open('查字', `<div class="rowx tk-top"><div class="grow"><div class="w1" lang="${LC.id}">${esc(form)}</div></div>${iconPlay(form, '播放 ' + form)}</div>${body}`, form);
+  if (miss) dictInline($('#tkDict', el), form);   // 不在單字庫：直接查字典（shared/mine.js）
 }
 function conjTable(w, which) {
   const c = IT.conjugate(w.word, w.pos);
@@ -8332,6 +8340,7 @@ const PAGE = {
   },
   mine: {
     prefix: MY, lang: LC.id, name: LC.name, dict: LC.id,
+    lookable: q => !/[\u3400-\u9fff]/.test(q),   // 打中文是在找意思，不拿去查外文字典
     posOpts: [['o', '其他'], ['n', '名詞'], ['v', '動詞'], ['adj', '形容詞']],
     builtin: word => WORDS.find(w => !w.custom && IT.norm(w.word).toLowerCase() === IT.norm(word).toLowerCase()),
     check: c => c.s && !answerSpan({ sent: c.s, ans: c.a || c.w })[1] ? `例句裡找不到「${c.a || c.w}」。如果這個字在例句裡有變化，請在「例句裡的寫法」填上例句裡的樣子。` : '',
@@ -8721,7 +8730,7 @@ function editMine(id, preset, look_) {
     const my = ++seq, zhIn = $('#my-zh', el), rIn = $('#my-r', el);
     dbox.hidden = false; dbox.innerHTML = '<p class="meta" style="margin:0">正在查「' + esc(word) + '」…</p>';
     const needR = M.readings && M.autoReading && M.needReading(word) && !val('r');
-    const [r, rd] = await Promise.all([dictLookup(word, M.dict), needR ? M.autoReading(word) : '']);
+    const [r, rd] = await Promise.all([dictCached(word), needR ? M.autoReading(word) : '']);
     if (my !== seq || !document.contains(dbox)) return;   // 查的時候又改了單字，或面板已經關了
     const notes = [];
     if (rd && rIn && !val('r')) { rIn.value = rd; showR(); notes.push('讀音'); }
@@ -8760,6 +8769,41 @@ function editMine(id, preset, look_) {
   };
   if (!c.w) setTimeout(() => wIn.focus(), 250);
 }
+
+// ---- 不在單字庫裡的字：直接查線上字典，結果顯示在原地（點字面板、搜尋不到時），不用先加到我的單字 ----
+// 查過的字記在 DICT_CACHE（這次開著的期間），之後按「加到我的單字」表單也直接用同一份結果；連不上的不記。
+const DICT_CACHE = new Map();
+function dictCached(word) {
+  word = String(word || '').trim().replace(/\s+/g, ' ');
+  let p = DICT_CACHE.get(word);
+  if (!p) { p = dictLookup(word, PAGE.mine.dict).then(r => { if (r.offline) DICT_CACHE.delete(word); return r; }); DICT_CACHE.set(word, p); }
+  return p;
+}
+let dictTimer = 0;
+// host：放結果的格子；delay：搜尋時邊打邊查，停下來一下才送出
+function dictInline(host, word, delay) {
+  const M = PAGE.mine;
+  word = String(word || '').trim().replace(/\s+/g, ' ');
+  clearTimeout(dictTimer);
+  if (!host || !M || !M.dict || !word || (M.lookable && !M.lookable(word))) return;
+  host.hidden = false; host.dataset.dw = word;
+  host.innerHTML = '<p class="meta" style="margin:0">正在查「' + esc(word) + '」…</p>';
+  const add = `<button class="btn quiet" type="button" data-addmine="${esc(word)}" style="align-self:flex-start">把「${esc(word)}」加到我的單字</button>`;
+  const run = async () => {
+    const needR = M.readings && M.autoReading && M.needReading(word);
+    const [r, rd] = await Promise.all([dictCached(word), needR ? M.autoReading(word).catch(() => '') : '']);
+    if (host.dataset.dw !== word || !document.contains(host)) return;   // 已經換了別的字，或面板關了
+    if (r.offline) host.innerHTML = '<p class="meta" style="margin:0">連不上字典。</p><button type="button" class="linkbtn" data-dictre style="align-self:flex-start">再查一次</button>' + add;
+    else if (!r.defs.length && !r.zh.length) host.innerHTML = '<p class="meta" style="margin:0">字典裡也查不到「' + esc(word) + '」（可以檢查拼字，或改查原形）。</p>' + add;
+    else {
+      const zh = !r.zh.length ? '' : M.meanEn ? `<div class="meta">中文：${esc(r.zh.join('；'))}</div>` : `<p class="dict-mean">${esc(r.zh.join('；'))}</p><div class="meta">中文是機器翻譯，可能不準</div>`;
+      const en = r.defs.map(d => `<div class="dict-pos">${esc(d.zh)}${d.zh !== d.pos && d.pos ? ` <span lang="en">${esc(d.pos)}</span>` : ''}</div><ol class="dict-list">${d.defs.map(x => `<li lang="en">${esc(x)}</li>`).join('')}</ol>`).join('');
+      host.innerHTML = `<div class="label">字典查到的（不在單字庫裡）</div>${rd ? `<div class="dict-rd" lang="ja">${esc(rd)}</div>` : ''}${M.meanEn ? '' : zh}${en ? `<details class="dict-en"${M.meanEn || !r.zh.length ? ' open' : ''}><summary>英文解釋（Wiktionary）</summary>${en}</details>` : ''}${M.meanEn ? zh : ''}` + add;
+    }
+    const re = $('[data-dictre]', host); if (re) re.onclick = () => dictInline(host, word);
+  };
+  if (delay) dictTimer = setTimeout(run, delay); else run();
+}
 // 切換語言選單裡的進度條（lang.js）
 if (window.AppLangs && AppLangs.stats) AppLangs.stats(() => { const c = libCounts(); return { l: c.learned, t: Math.max(1, c.total - c.excluded) }; });
 function doSearch(qs) {
@@ -8770,7 +8814,7 @@ function doSearch(qs) {
   let hits = WORDS.filter(w => IT.stripAccents((w.word + ' ' + w.title + ' ' + w.e[3]).toLowerCase()).includes(qa) || w.zh.includes(qs.trim()) || (q.length > 1 && /^[a-z ]+$/.test(q) && w.en.toLowerCase().includes(q)));
   hits.sort((a, b) => (IT.stripAccents(a.word.toLowerCase()).startsWith(qa) ? 0 : 1) - (IT.stripAccents(b.word.toLowerCase()).startsWith(qa) ? 0 : 1));
   hits = hits.slice(0, 30);
-  if (!hits.length) { box.innerHTML = `<div class="meta">找不到符合的字。</div><button class="btn quiet" data-addmine="${esc(qs.trim())}" style="align-self:flex-start">查字典並把「${esc(qs.trim())}」加到我的單字</button>`; return; }
+  if (!hits.length) { box.innerHTML = `<div class="meta">單字庫裡找不到符合的字。</div><div class="dictbox" id="qDict"></div>`; dictInline($('#qDict', box), qs, 600); return; }   // 直接查字典（shared/mine.js）
   box.innerHTML = hits.map(w => {
     const r = getRec(w.id);
     const canQ = r.s === 'new' || r.s === 'excluded';
