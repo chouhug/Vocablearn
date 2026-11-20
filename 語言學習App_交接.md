@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v122'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v123'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -132,6 +132,13 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 - 日文頁（index.html）和語言頁（lang-app.js）用同一套規則（core.js）；新欄位 `rv`、`dd` 會跟著 Firestore 同步，但備份碼不含（匯入備份只會少了輪流的順序）。
 
 ## 最近做過的改動
+
+- **填空填了別的字會標出來**（全部語言，2026-11-21 使用者要求）：填空答錯時，如果填的其實是單字庫裡的另一個字（或它的變化形），在正確答案下面用黃框標出「你寫的 inu（いぬ） 是另一個字：犬（いぬ）：「狗」」「你寫的 andato 是另一個字：andare（過去分詞）：「去」」。最多列 3 個（同音字）。填的是這題的字自己的其他形（變化錯了）、亂打、按「看答案」都不標。
+  - 共用流程：shared/fill-tab.js 的 `PAGE.fill.make()` 多了 `other(v)`（回傳 HTML 或 ''），答錯時接在正確答案後面（`.other-word`）。
+  - 日文：ja/engine.js 的 `otherWordsOf(input, w, words)`（漢字、假名、拼音都認得；動詞、い形容詞的變化形用 verbForms／adjForms 建索引，不收「連用形」「未然形」「て形的一部分」這種片段；形的標示照 `FILL_FORM_TAGS`）。測試 `n5src/ja/other-test.js`（已加進 test-all.js）。
+  - 語言頁：lang-app.js 的 `otherWordOf(input, w)`／`otherWordHTML`，用斷詞查詢表 LOOK（變化形，desc 是哪個形；原形不寫）和直接比原形（片語 give up、我的單字）。LOOK 沒收的形（德文 ging、西文 fui 這類過去式）認不出來。同義字照舊先「再想想看」，第二次答錯才標。
+  - English 介面：i18n-ui.js 加「你寫的」「是另一個字：」。
+  - 測試：`node n5src/other-e2e.js n5work`（要 playwright 和 Chrome，日文另跑一次 English 介面＋深色，360px）。
 
 - **不在單字庫的字直接查字典**（全部語言，2026-11-16）：以前搜尋不到、點例句的字查不到時，只有「查字典並加到我的單字」按鈕，要打開新增表單才看得到字典。現在直接在原地查（搜尋框停打 0.6 秒才送出），顯示中文翻譯（機器翻譯）、英文解釋（Wiktionary，依詞性），日文有漢字時連讀音；下面有「把「…」加到我的單字」。
   - 程式在 shared/mine.js 的 `dictInline(host, word, delay)` 和 `dictCached(word)`（這次開著的期間記住查過的字，按「加到我的單字」時表單直接用同一份結果；連不上的不記）。點字面板（lang-app.js 的 openToken，格子 `#tkDict`）和兩邊的 doSearch（格子 `#qDict`）會呼叫。
