@@ -731,6 +731,7 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .recent-row input{width:110px;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 10px;font:inherit;font-size:22px;text-align:center}
 .recent-row input:focus{outline:2px solid var(--pri);outline-offset:1px;border-color:var(--pri)}
 .recent-err{margin:0;min-height:1.2em;font-size:14px;color:var(--ng);text-align:center}
+.fc-ago{white-space:nowrap}
 </style>
 </head><body>
 <header class="top"><div class="wrap">
@@ -2904,7 +2905,7 @@ const D = {
 '招呼語與常用句': 'Greetings & phrases', '招呼語': 'Greetings', '助詞・語尾': 'Particle / ending', '助詞': 'Particles',
 '動詞(一類)': 'Verb (group 1)', '動詞(二類)': 'Verb (group 2)', '動詞(三類)': 'Verb (group 3)',
 '未學': 'New', '待考': 'To test', '已學會': 'Learned', '已排除': 'Excluded', '已列入考題': 'Added to quiz', '練習中': 'Practicing', '還沒學': 'Not learned',
-'最近學過': 'Recently learned', '自訂天數…': 'Custom days…', '自訂字數…': 'Custom word count…', '自訂天數': 'Custom days', '自訂字數': 'Custom word count', '出最近幾天內開始學的字。': 'Words you started learning in the last few days.', '出最近開始學的幾個字。': 'The words you started learning most recently.', '最近': 'Last', '個字': 'words', '天數': 'Days', '字數': 'Words', '確定': 'OK', '字卡最近學過': 'Cards: recently learned', '最近學過的範圍': 'Recently learned range', '最近 1 天': 'Last 1 day', '最近 3 天': 'Last 3 days', '最近 7 天': 'Last 7 days',
+'最近學過': 'Recently learned', '請填 1 以上的整數': 'Enter a whole number of 1 or more', '今天學過': 'Learned today', '昨天學過': 'Learned yesterday', '自訂天數…': 'Custom days…', '自訂字數…': 'Custom word count…', '自訂天數': 'Custom days', '自訂字數': 'Custom word count', '出最近幾天內開始學的字。': 'Words you started learning in the last few days.', '出最近開始學的幾個字。': 'The words you started learning most recently.', '最近': 'Last', '個字': 'words', '天數': 'Days', '字數': 'Words', '確定': 'OK', '字卡最近學過': 'Cards: recently learned', '最近學過的範圍': 'Recently learned range', '最近 1 天': 'Last 1 day', '最近 3 天': 'Last 3 days', '最近 7 天': 'Last 7 days',
 '最近 10 個字': 'Last 10 words', '最近 20 個字': 'Last 20 words', '最近 30 個字': 'Last 30 words', '最近 50 個字': 'Last 50 words',
 '錯題': 'Mistakes', '錯題複習': 'Mistake review', '錯題複習中': 'Reviewing mistakes', '到期複習': 'Due review', '單選錯題': 'Choice mistakes', '填空錯題': 'Fill-in mistakes',
 '單選錯題複習': 'Choice mistake review', '填空錯題複習': 'Fill-in mistake review', '單選複習': 'Choice review', '填空複習': 'Fill-in review', '複習已學會': 'Review learned',
@@ -3259,7 +3260,7 @@ R(/^第 (\d+) 題／共 (\d+) 題$/, 'Question $1 of $2'); R(/^這一組答對 (
 R(/^你已經 (\d+) 天沒來練習了，看看還記不記得這些字。$/, "You haven't practiced for $1 days. Do you still remember these words?");
 R(/^每做 (\d+)～(\d+) 題（每次不一定），或隔了 (\d+) 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。$/, "Every $1–$2 questions (it varies), or when you haven't opened the app for $3+ days, a set of three questions on words you've studied pops up: two multiple-choice (Japanese words with kanji test the reading) and one fill-in."); R(/^(\d+) 個$/, '$1 words');
 R(/^每做 (\d+)～(\d+) 題（每次不一定；單選不算，填空、聽寫等才算），或隔了 (\d+) 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。$/, "Every $1–$2 questions (it varies; multiple choice doesn't count, fill-in, dictation and the like do), or when you haven't opened the app for $3+ days, a set of three questions on words you've studied pops up: two multiple-choice (Japanese words with kanji test the reading) and one fill-in.");
-R(/^最近 (\d+) 天$/, (m, n) => n === '1' ? 'Last 1 day' : `Last ${n} days`); R(/^最近 (\d+) 個字$/, 'Last $1 words'); R(/^請填 1～(\d+) 的整數$/, 'Enter a whole number from 1 to $1');
+R(/^最近 (\d+) 天$/, (m, n) => n === '1' ? 'Last 1 day' : `Last ${n} days`); R(/^最近 (\d+) 個字$/, 'Last $1 words'); R(/^請填 1～(\d+) 的整數$/, 'Enter a whole number from 1 to $1'); R(/^你最早是 (\d+) 天前開始學的，填更多會自動改成 \1。$/, 'You started $1 days ago; anything larger becomes $1.'); R(/^你學過 (\d+) 個字，填更多會自動改成 \1。$/, "You've learned $1 words; anything larger becomes $1."); R(/^你最早是 (\d+) 天前開始學的，已改成最近 \1 天$/, 'You started $1 days ago — set to the last $1 days'); R(/^你學過 (\d+) 個字，已改成最近 \1 個字$/, "You've learned $1 words — set to the last $1 words"); R(/^(\d+) 天前學過$/, 'Learned $1 days ago');
 R(/^已學會，明天（(.+)）會出現在到期複習。$/, 'Learned! It will be in due review tomorrow ($1).');
 R(/^下次複習：(.+)$/, 'Next review: $1');
 R(/^已學會 (\d+)\/(\d+)$/, 'Learned $1/$2');
@@ -5816,7 +5817,7 @@ const roundSize = () => SET.round === 'all' ? 100000 : (Number(SET.round) || 20)
 // @include shared/recent.js（「最近學過」的範圍；這一段由 build.js 從 n5src/shared/recent.js 複製過來，要改請改那個檔再跑 build.js）
 // ================= 「最近學過」的範圍（日文頁和語言頁共用：n5src/shared/recent.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
-// SET.recent：d<N> = 最近 N 天學過的字，c<N> = 最近學過的 N 個字（開始學的時間 q，舊紀錄用 t）。
+// SET.recent：d<N> = 最近 N 天學過的字（照日曆算，最近 1 天＝昨天和今天），c<N> = 最近學過的 N 個字（開始學的時間 q，舊紀錄用 t）。
 // 選單只有三項：目前的範圍、「自訂天數…」「自訂字數…」（打開 recentAsk 的面板自己填數字）。預設是最近 1 天。
 // 字卡、單選、填空（日文還有聽寫）共用同一個範圍。
 const RECENT_MAX = { d: 365, c: 999 };
@@ -5831,21 +5832,39 @@ function recentLabel() { const [u, n] = recentVal(); return recentName(u, n); }
 // 選單的選項：目前的範圍＋兩個「自訂」
 function recentOpts() { const [u, n] = recentVal(); return [[u + n, recentName(u, n)], ['+d', '自訂天數…'], ['+c', '自訂字數…']]; }
 const recentT = id => { const r = getRec(id); return r.q || r.t || 0; };
+// 學過的字（待考、已學會，有開始學的時間）
+const recentCand = () => WORDS.filter(w => { const r = getRec(w.id); return (r.s === 'queued' || r.s === 'learned') && recentT(w.id) > 0; });
 function recentIds() {
   const [u, n] = recentVal();
-  const cand = WORDS.filter(w => { const r = getRec(w.id); return (r.s === 'queued' || r.s === 'learned') && recentT(w.id) > 0; });
+  const cand = recentCand();
   if (u === 'c') return new Set(cand.sort((a, b) => recentT(b.id) - recentT(a.id)).slice(0, n).map(w => w.id));
-  const since = Date.now() - n * 864e5;
-  return new Set(cand.filter(w => recentT(w.id) >= since).map(w => w.id));
+  return new Set(cand.filter(w => agoDays(recentT(w.id)) <= n).map(w => w.id));
+}
+// 開始學的時間 t 是幾天前（照日曆算：今天 0、昨天 1）。「最近 N 天」＝ N 天前（含）以後學的，和字卡左上角的「N 天前學過」一致
+const agoDays = t => Math.round((new Date(today()) - new Date(ymd(new Date(t)))) / 864e5);
+// 目前學過的量：字數（u = 'c'）或從最早學的字到現在幾天（u = 'd'，至少 1）；還沒學過字就是 0
+function recentAvail(u) {
+  const cand = recentCand();
+  if (!cand.length) return 0;
+  if (u === 'c') return cand.length;
+  return Math.max(1, ...cand.map(w => agoDays(recentT(w.id))));
+}
+// 這個字是幾天前開始學的（字卡左上角）：今天學過、昨天學過、N 天前學過；沒學過就是 ''
+function learnedAgo(id) {
+  const r = getRec(id);
+  if (!(r.s === 'queued' || r.s === 'learned')) return '';
+  const t = recentT(id); if (!t) return '';
+  const d = agoDays(t);
+  return d <= 0 ? '今天學過' : d === 1 ? '昨天學過' : `${d} 天前學過`;
 }
 // 換了範圍：存起來，重新出題
 function recentSet(v, after) { SET.recent = v; saveSet(); mcRound = null; fillRound = null; deck = null; if (after) after(); }
-// 自己填天數（u = 'd'）或字數（u = 'c'）的面板；填好按「確定」才會換
+// 自己填天數（u = 'd'）或字數（u = 'c'）的面板；填好按「確定」才會換。填太大會改成學過的量（recentAvail）
 function recentAsk(u, after) {
-  const [cu, cn] = recentVal(), max = RECENT_MAX[u], unit = u === 'd' ? '天' : '個字';
+  const [cu, cn] = recentVal(), max = RECENT_MAX[u], have = recentAvail(u), unit = u === 'd' ? '天' : '個字';
   const el = Sheet.open(u === 'd' ? '自訂天數' : '自訂字數', `<form id="recentForm" class="recent-form" novalidate>
-      <p class="meta">${u === 'd' ? '出最近幾天內開始學的字。' : '出最近開始學的幾個字。'}</p>
-      <label class="recent-row" for="recentN"><span>最近</span><input id="recentN" type="number" inputmode="numeric" pattern="[0-9]*" min="1" max="${max}" step="1" value="${cu === u ? cn : u === 'd' ? 14 : 100}" aria-label="${u === 'd' ? '天數' : '字數'}"><span>${unit}</span></label>
+      <p class="meta">${u === 'd' ? '出最近幾天內開始學的字。' : '出最近開始學的幾個字。'}</p>${have ? `<p class="meta">${u === 'd' ? `你最早是 ${have} 天前開始學的，填更多會自動改成 ${have}。` : `你學過 ${have} 個字，填更多會自動改成 ${have}。`}</p>` : ''}
+      <label class="recent-row" for="recentN"><span>最近</span><input id="recentN" type="number" inputmode="numeric" pattern="[0-9]*" min="1" step="1" value="${cu === u ? cn : u === 'd' ? 14 : 100}" aria-label="${u === 'd' ? '天數' : '字數'}"><span>${unit}</span></label>
       <p class="recent-err" id="recentErr" role="alert"></p>
       <button class="btn solid block" type="submit">確定</button>
     </form>`, u === 'd' ? '自訂天數' : '自訂字數');
@@ -5853,9 +5872,14 @@ function recentAsk(u, after) {
   setTimeout(() => { inp.focus(); inp.select(); }, 60);
   $('#recentForm', el).onsubmit = e => {
     e.preventDefault();
-    const s = String(inp.value).trim(), n = Number(s);
-    if (!/^\d+$/.test(s) || n < 1 || n > max) { err.textContent = `請填 1～${max} 的整數`; inp.focus(); return; }
-    Sheet.close(); recentSet(u + n, after); toast(`最近學過：${recentName(u, n)}`);
+    const s = String(inp.value).trim();
+    let n = Number(s);
+    if (!/^\d+$/.test(s) || n < 1) { err.textContent = '請填 1 以上的整數'; inp.focus(); return; }
+    // 填得比學過的量還多：自動改成學過的量（還沒學過字就只限上限）
+    const cap = have ? Math.min(have, max) : max;
+    const cut = n > cap; if (cut) n = cap;
+    Sheet.close(); recentSet(u + n, after);
+    toast(cut && have && n === have ? (u === 'd' ? `你最早是 ${n} 天前開始學的，已改成最近 ${n} 天` : `你學過 ${n} 個字，已改成最近 ${n} 個字`) : `最近學過：${recentName(u, n)}`);
   };
 }
 // 選單變了：選「自訂…」就打開面板（選單先跳回原本的值，按確定才換），其他直接換
@@ -6393,6 +6417,7 @@ function nextConjQ() {
 //   headRight(w) 右上角（日文：文法按鈕）、afterHead(w) 標題下面（日文：文法說明）、
 //   word(w) 單字那一行（日文：振り仮名＋羅馬拼音；語言頁：單字，太長會縮小）、
 //   afterMean(w) 意思下面（語言頁：變化形）、bind(host) 綁定上面這些的按鈕
+// 左上角也會顯示這個字幾天前開始學的（learnedAgo，shared/recent.js；新字不顯示）
 let deck = null;
 const CARD_SRCS = [['new', '新字'], ['queued', '待考'], ['recent', '最近學過'], ['mcWrong', '單選錯題'], ['fillWrong', '填空錯題'], ['mcReview', '單選錯題複習'], ['fillReview', '填空錯題複習'], ['learned', '複習已學會']];
 function renderCard() {
@@ -6440,7 +6465,7 @@ function showFlash() {
     ? `<button class="btn known" data-a="known">${ICON.ok}已經會了</button><button class="btn solid" data-a="queue">列入考題</button>`
     : `<button class="btn solid wide" data-a="next">下一張</button>`;
   host.innerHTML = `<div class="card fc">
-    <div class="qhead"><div class="qh-l">${P.pos(w)}${RANDOM_SRCS.includes(deck.src) ? '' : `<span class="meta" aria-label="這疊還剩 ${deck.cards.length} 張，此分類共 ${deck.total} 張">剩 ${deck.cards.length} · 共 ${deck.total}</span>`}</div>${P.headRight(w)}</div>
+    <div class="qhead"><div class="qh-l">${P.pos(w)}${RANDOM_SRCS.includes(deck.src) ? '' : `<span class="meta" aria-label="這疊還剩 ${deck.cards.length} 張，此分類共 ${deck.total} 張">剩 ${deck.cards.length} · 共 ${deck.total}</span>`}${learnedAgo(w.id) ? `<span class="meta fc-ago">${learnedAgo(w.id)}</span>` : ''}</div>${P.headRight(w)}</div>
     ${P.afterHead(w)}
     ${isWrong && tags.length ? `<div class="row">${tags.map(t => `<span class="tag">${ICON.ng.replace('<svg', '<svg width="14" height="14"')}${t}</span>`).join('')}</div>` : ''}
     ${P.word(w)}

@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v126'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v127'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -134,6 +134,10 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **字卡顯示「幾天前學過」、自訂填太大自動改成學過的量**（2026-11-22 使用者要求，全部語言）：
+  - 字卡左上角（剩幾張後面）顯示這個字開始學的時間：今天學過／昨天學過／N 天前學過（`learnedAgo`，看 q，舊紀錄用 t；新字不顯示）。
+  - 「最近 N 天」改成照日曆算（`agoDays`：今天 0、昨天 1），最近 N 天＝ N 天前（含）以後學的，和字卡上的「N 天前學過」一致。所以「最近 1 天」現在是昨天和今天（以前是 24 小時內）。
+  - 自訂面板會說「你學過 N 個字／你最早是 N 天前開始學的，填更多會自動改成 N」；填得比學過的量多就自動改成那個量並跳提示（`recentAvail`）。不再有 365／999 的錯誤提示，只有填 0 或不是整數會提示「請填 1 以上的整數」。還沒學過字時照舊上限 365 天、999 個字。
 - **「最近學過」選單只留自訂**（2026-11-22 使用者覺得選項太多）：範圍選單只剩三項：目前的範圍（例如「最近 50 個字」）、「自訂天數…」、「自訂字數…」，預設的 1／3／7 天、10／20／30／50 個字拿掉了（`recentOpts`）。預設值還是最近 1 天，舊設定照用。
 - **「最近學過」可以自己填天數或字數**（全部語言，2026-11-22 使用者要求）：範圍選單（字卡、單選、填空、日文聽寫上方，和設定頁的「最近學過的範圍」）最後多了「自訂天數…」「自訂字數…」，選了會拉起面板填數字（天數 1～365、字數 1～999，`RECENT_MAX`），按「確定」才換；按叉叉不變。填過的值會出現在選單裡（例如「最近 5 天」，排在同單位的預設之間）。`SET.recent` 格式不變（d<N>／c<N>），舊設定照用。
   - 程式整理到新的 `n5src/shared/recent.js`（recentVal、recentLabel、recentOpts、recentIds、recentT、recentSet、recentAsk、recentChange、recentCtl），日文頁 ja/app.js 和 lang-app.js 原本各寫一份的都拿掉了，改用 include。樣式 base.css 的 `.recent-form`；English 在 i18n-ui.js（也補上「單選不算」的兩句設定文字）。
