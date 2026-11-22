@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v123'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v124'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -133,6 +133,10 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **字卡加「最近學過」、單選不算突擊測驗題數**（全部語言，2026-11-22 使用者要求）：
+  - 字卡來源多了「最近學過」（shared/card-tab.js 的 CARD_SRCS，放在「待考」後面）：和單選、填空一樣用 `SET.recent` 的範圍（最近 1／3／7 天、最近 10／20／30／50 個字；`recentCtl`、`srcPool`），選了就把詞性換成範圍選單，一疊就是範圍內的全部字（打亂）。三個分頁共用同一個範圍，改了會重設字卡、單選、填空的這一輪（`recentCtl`、單字庫設定都會 `deck = null`）。單字庫的入口多了「字卡最近學過」。單選本來就有「最近學過」。
+  - 單選不算突擊測驗的題數：record() 改成 `if (mode !== 'mc') Pop.tick()`，和每日題數一樣只有填空、聽寫、五十音等才算。設定選項改成「開（每做 10～25 題，單選不算）」。隔 2 天以上沒打開的「好久不見」照舊。
+  - 測試：`node n5src/card-recent-e2e.js n5work ja it es de ru en`（新的，要 playwright 和 Chrome）；pop-e2e.js 改成單選答完不跳、計數不變，填空答完才跳。
 - **填空填了別的字會標出來**（全部語言，2026-11-21 使用者要求）：填空答錯時，如果填的其實是單字庫裡的另一個字（或它的變化形），在正確答案下面用黃框標出「你寫的 inu（いぬ） 是另一個字：犬（いぬ）：「狗」」「你寫的 andato 是另一個字：andare（過去分詞）：「去」」。最多列 3 個（同音字）。填的是這題的字自己的其他形（變化錯了）、亂打、按「看答案」都不標。
   - 共用流程：shared/fill-tab.js 的 `PAGE.fill.make()` 多了 `other(v)`（回傳 HTML 或 ''），答錯時接在正確答案後面（`.other-word`）。
   - 日文：ja/engine.js 的 `otherWordsOf(input, w, words)`（漢字、假名、拼音都認得；動詞、い形容詞的變化形用 verbForms／adjForms 建索引，不收「連用形」「未然形」「て形的一部分」這種片段；形的標示照 `FILL_FORM_TAGS`）。測試 `n5src/ja/other-test.js`（已加進 test-all.js）。
@@ -175,7 +179,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - 兩種時機跳出一組三題（**整個畫面蓋住、不能直接關掉**：沒有叉叉，Esc、點旁邊都關不掉，三題做完按「繼續練習」才回去；`.pop-full`，lang.js 的 OPEN／SCROLLER 也有它，背景會鎖住不能滑）：每做 10～25 題（每次隨機，存在 `goal`），或隔了 2 天以上沒打開（`POP_AWAY_DAYS`，「好久不見！先考你一組」）。設定「單字庫 → 設定 → 練習 → 突擊測驗」：開／關閉（共用的 `n5:settings` 的 `pop`：'on'／'off'，預設開）。
   - 一組：第 1 題看單字選意思；第 2 題日文有漢字的字考讀音（`PAGE.pop.readQ`），其他語言或沒有漢字時看意思選單字；第 3 題填空。題目從「待考」和「已學會」最久沒練到的 8 個字裡抽，盡量三題不同字。選擇照單選記錄（不算每日題數），填空照填空記錄（算每日題數，可以學會）。最後顯示「這一組答對 x／3 題」，按「繼續練習」關掉。
   - **避免誤觸**：跳出來先顯示說明畫面（「3／三題做完才會回到原本的練習」），「開始作答」按鈕要等 1.2 秒（`POP_LOCK`）才按得下去，按鈕上有進度條；說明畫面時 Quiz.active 是 null，鍵盤也答不到後面的題目。各頁的鍵盤處理改成允許不在分頁裡的題目（`closest('.tab') || {}`）。
-  - 計數和上次打開的日期存在各語言自己的 `n5:pop`、`it:pop`…（`{ n, goal, last }`），不同步。每次 record() 加一（單選也算進這個計數），突擊測驗本身的題目不算。有面板、導覽、選語言畫面開著時會等一下再跳。
+  - 計數和上次打開的日期存在各語言自己的 `n5:pop`、`it:pop`…（`{ n, goal, last }`），不同步。每次 record() 加一（單選不算，2026-11-22 起），突擊測驗本身的題目不算。有面板、導覽、選語言畫面開著時會等一下再跳。
   - 填空用固定的 id（#fillIn…），所以出填空題前會先清掉填空分頁，關掉後如果停在填空分頁就 renderFill() 畫回來（作答過的接著下一題）。
   - 程式在 `n5src/shared/pop-quiz.js`（日文頁 app-end.js 的 `// @include`、語言頁 lang-app.js 的 `/*@include*/`），各頁的 `PAGE.pop`；樣式 base.css 的 `.pop-sheet`；English 在 i18n-ui.js。
   - 測試：`node n5src/pop-e2e.js n5work ja it es de ru en`（要 playwright 和 Chrome，不在 test-all.js 裡）：單選不加題數、填空加題數、做滿題數跳出、三題的題型、日文讀音題、成績、計數不含突擊題、隔 5 天跳出、填空分頁清掉再畫回來、同一天不重複、設定關閉不跳、手機寬度。

@@ -6120,7 +6120,8 @@ function record(w, mode, correct, source) {
   if (mode !== 'mc') bumpDay(); else saveLocal();
   Cloud.schedule();
   refreshSrcCounts();
-  Pop.tick();   // 做了 10～25 題就跳出突擊測驗（shared/pop-quiz.js）
+  // 做了 10～25 題就跳出突擊測驗（shared/pop-quiz.js）；單選不算每日題數，也不算進突擊測驗的題數
+  if (mode !== 'mc') Pop.tick();
 }
 
 // ================= 語音 =================
@@ -6522,7 +6523,7 @@ function recentIds() {
   const since = Date.now() - n * 864e5;
   return new Set(cand.filter(w => recentT(w.id) >= since).map(w => w.id));
 }
-function recentCtl(onChange) { return { html: pillSelect('recentSel', '最近學過的範圍', RECENT_OPTS, SET.recent), bind: host => { const rs = $('#recentSel', host); if (rs) rs.onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; onChange(); }; } }; }
+function recentCtl(onChange) { return { html: pillSelect('recentSel', '最近學過的範圍', RECENT_OPTS, SET.recent), bind: host => { const rs = $('#recentSel', host); if (rs) rs.onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; deck = null; onChange(); }; } }; }
 // 題目上方的進度：答完一題（還沒按下一題）就先算這題做完了
 const progText = (n, d, total) => ({ left: Math.max(0, n - d), pct: n ? Math.min(100, d / n * 100) : 0 });
 function progressLine(round, total) {
@@ -6849,27 +6850,30 @@ function formsLine(w) {
 //   word(w) 單字那一行（日文：振り仮名＋羅馬拼音；語言頁：單字，太長會縮小）、
 //   afterMean(w) 意思下面（語言頁：變化形）、bind(host) 綁定上面這些的按鈕
 let deck = null;
-const CARD_SRCS = [['new', '新字'], ['queued', '待考'], ['mcWrong', '單選錯題'], ['fillWrong', '填空錯題'], ['mcReview', '單選錯題複習'], ['fillReview', '填空錯題複習'], ['learned', '複習已學會']];
+const CARD_SRCS = [['new', '新字'], ['queued', '待考'], ['recent', '最近學過'], ['mcWrong', '單選錯題'], ['fillWrong', '填空錯題'], ['mcReview', '單選錯題複習'], ['fillReview', '填空錯題複習'], ['learned', '複習已學會']];
 function renderCard() {
   const host = $('#tab-card');
   Quiz.active = null;
-  const counts = Object.fromEntries(CARD_SRCS.map(([k]) => [k, filtered(k).length]));
+  const counts = Object.fromEntries(CARD_SRCS.map(([k]) => [k, srcPool(k).length]));
+  const isRecent = UI.cardSrc === 'recent';
+  // 「最近學過」和單選、填空一樣：不看詞性，改顯示範圍選單（最近幾天／最近幾個字），一疊就是範圍內的全部字
   host.innerHTML = `
-    <div class="ctl">${pillSelect('cardSrc', '字卡來源', CARD_SRCS.map(([k, l]) => [k, srcText(k, l, counts[k])]), UI.cardSrc)}${posChips()}</div>
+    <div class="ctl">${pillSelect('cardSrc', '字卡來源', CARD_SRCS.map(([k, l]) => [k, srcText(k, l, counts[k])]), UI.cardSrc)}${isRecent ? recentCtl().html : posChips()}</div>
     <div id="fcHost"></div>`;
   $('#cardSrc', host).onchange = e => { UI.cardSrc = e.target.value; saveUI(); deck = null; renderCard(); };
   bindPos(host, () => { deck = null; renderCard(); });
-  const valid = deck && deck.src === UI.cardSrc && deck.pos === UI.pos;
+  recentCtl(() => { deck = null; renderCard(); }).bind(host);
+  const valid = deck && deck.src === UI.cardSrc && (isRecent || deck.pos === UI.pos);
   if (!valid || !deck.cards.length) {
-    const pool = filtered(UI.cardSrc);
+    const pool = srcPool(UI.cardSrc);
     if (!pool.length) {
-      const msg = { new: '這個分類的新字都看過了。', queued: '還沒有待考的字。' }[UI.cardSrc] || '這個分類目前沒有字。';
+      const msg = { new: '這個分類的新字都看過了。', queued: '還沒有待考的字。', recent: `「${esc(recentLabel())}」範圍內還沒有學過的字。可以在上方把範圍調大，或先看新字、列入考題。` }[UI.cardSrc] || '這個分類目前沒有字。';
       $('#fcHost').innerHTML = `<div class="card empty"><p>${msg}</p>${UI.cardSrc !== 'new' ? '<button class="btn solid" id="toNew">看新字</button>' : ''}</div>`;
       const b = $('#toNew'); if (b) b.onclick = () => { UI.cardSrc = 'new'; saveUI(); deck = null; renderCard(); };
       return;
     }
     const isRev = /Review$/.test(UI.cardSrc);
-    const cards = UI.cardSrc === 'new' ? pool.slice(0, roundSize()) : pickRound(pool, getRec, /^fill/.test(UI.cardSrc) ? 'fill' : 'mc', isRev ? REVIEW_ROUND : roundSize(), isRev);
+    const cards = UI.cardSrc === 'new' ? pool.slice(0, roundSize()) : isRecent ? shuffle(pool.slice()) : pickRound(pool, getRec, /^fill/.test(UI.cardSrc) ? 'fill' : 'mc', isRev ? REVIEW_ROUND : roundSize(), isRev);
     deck = { src: UI.cardSrc, pos: UI.pos, cards, total: pool.length };
   }
   showFlash();
@@ -6914,7 +6918,7 @@ function showFlash() {
 }
 function updateCardCounts() {
   const sel = $('#cardSrc'); if (!sel) return;
-  [...sel.options].forEach(o => { const l = CARD_SRCS.find(x => x[0] === o.value); if (l) o.textContent = srcText(o.value, l[1], filtered(o.value).length); });
+  [...sel.options].forEach(o => { const l = CARD_SRCS.find(x => x[0] === o.value); if (l) o.textContent = srcText(o.value, l[1], srcPool(o.value).length); });
 }
 
 // ================= 填空 =================
@@ -7651,7 +7655,7 @@ function renderLib() {
   const host = $('#tab-lib');
   const c = libCounts();
   const pct = Math.round(c.learned / Math.max(1, c.total - c.excluded) * 100);
-  const ents = [['fill', 'due', '到期複習', c.due], ['mc', 'mcWrong', '單選錯題', c.mcW], ['fill', 'fillWrong', '填空錯題', c.fillW], ['mc', 'mcReview', '單選錯題複習', c.mcR], ['fill', 'fillReview', '填空錯題複習', c.fillR], ['mc', 'recent', '單選最近學過', c.recent], ['fill', 'recent', '填空最近學過', c.recent], ['mc', 'learned', '複習單選', c.learned], ['card', 'learned', '複習字卡', c.learned]].filter(x => x[3] > 0);
+  const ents = [['fill', 'due', '到期複習', c.due], ['mc', 'mcWrong', '單選錯題', c.mcW], ['fill', 'fillWrong', '填空錯題', c.fillW], ['mc', 'mcReview', '單選錯題複習', c.mcR], ['fill', 'fillReview', '填空錯題複習', c.fillR], ['mc', 'recent', '單選最近學過', c.recent], ['fill', 'recent', '填空最近學過', c.recent], ['card', 'recent', '字卡最近學過', c.recent], ['mc', 'learned', '複習單選', c.learned], ['card', 'learned', '複習字卡', c.learned]].filter(x => x[3] > 0);
   host.innerHTML = `<div id="authTop"></div>
     <div class="stats">
       <div class="stat"><b>${pct}%</b><span>已學會</span></div>
@@ -7700,8 +7704,8 @@ function renderLib() {
           <select id="vtipSel"><option value="on"${VerbTip.on() ? ' selected' : ''}>顯示</option><option value="off"${VerbTip.on() ? '' : ' selected'}>不顯示（題目放中間）</option></select>
           <div class="meta">字卡、單選、填空的題目下面有空位時，放一個你學過的動詞的變化。</div>
           <label class="label" for="popSel">突擊測驗</label>
-          <select id="popSel"><option value="on"${Pop.on() ? ' selected' : ''}>開（每做 ${POP_MIN}～${POP_MAX} 題）</option><option value="off"${Pop.on() ? '' : ' selected'}>關閉</option></select>
-          <div class="meta">每做 ${POP_MIN}～${POP_MAX} 題（每次不一定），或隔了 ${POP_AWAY_DAYS} 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。</div>
+          <select id="popSel"><option value="on"${Pop.on() ? ' selected' : ''}>開（每做 ${POP_MIN}～${POP_MAX} 題，單選不算）</option><option value="off"${Pop.on() ? '' : ' selected'}>關閉</option></select>
+          <div class="meta">每做 ${POP_MIN}～${POP_MAX} 題（每次不一定；單選不算，填空、聽寫等才算），或隔了 ${POP_AWAY_DAYS} 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。</div>
         </section>
         ${P.langHTML()}
         <section><h4>單字意思</h4>
@@ -7742,7 +7746,7 @@ function renderLib() {
   $('#vtipSel').onchange = e => { SET.vtip = e.target.value; saveSet(); toast(SET.vtip === 'off' ? '動詞變化：不顯示' : '動詞變化：顯示'); };
   $('#popSel').onchange = e => { SET.pop = e.target.value; saveSet(); toast(SET.pop === 'off' ? '突擊測驗：關閉' : '突擊測驗：開'); };
   $('#hintSel').onchange = e => { SET.fillHint = e.target.value; saveSet(); fillRound = null; toast(SET.fillHint === 'show' ? '填空提示：一開始就顯示' : '填空提示：按了才顯示'); };
-  $('#recentSet').onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; toast(`最近學過：${recentLabel()}`); renderLib(); };
+  $('#recentSet').onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; deck = null; toast(`最近學過：${recentLabel()}`); renderLib(); };
   $('#vibSel').onchange = e => { SET.vib = e.target.value; saveSet(); buzz(true); };
   $('#vibTest').onclick = testBuzz;
   $('#sfxSel').onchange = e => { SET.sfx = e.target.value; saveSet(); if (SET.sfx !== 'off') Sfx.ok(); };
@@ -8178,7 +8182,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && Tour.card 
 // ================= 突然考一組（日文頁和語言頁共用：n5src/shared/pop-quiz.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
 // 兩種時機會跳出一組三題（兩題選擇＋一題填空），蓋住整個畫面、做完才能回去（.pop-full，樣式在 base.css）：
-//   1. 做了 10～25 題（每次隨機）：設定「突擊測驗」（SET.pop：'off' 關閉，其他＝開，預設開）。record() 每記一題就呼叫 Pop.tick()。
+//   1. 做了 10～25 題（每次隨機）：設定「突擊測驗」（SET.pop：'off' 關閉，其他＝開，預設開）。record() 每記一題就呼叫 Pop.tick()（單選不算，和每日題數一樣）。
 //   2. 隔了好幾天沒打開（POP_AWAY_DAYS 天以上）：啟動時呼叫 Pop.start()。
 // 一組的題目：第 1 題看單字選意思；第 2 題考讀音（日文有漢字的字，PAGE.pop.readQ），沒有就看意思選單字；第 3 題填空。
 // 題目從「待考」和「已學會」最久沒練到的字裡抽（盡量三題不同字）；作答照單選、填空記錄（選擇不算每日題數，填空算）。
