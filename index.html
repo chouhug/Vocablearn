@@ -724,6 +724,13 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .vtip-f{white-space:nowrap}
 .vtip-f i{font-style:normal;font-size:11px;opacity:.8}
 .vtip-f span{color:var(--fg);font-weight:600}
+/* 「最近學過」自訂天數／字數的面板（shared/recent.js） */
+.recent-form{display:flex;flex-direction:column;gap:12px;padding-bottom:6px}
+.recent-form .meta{margin:0}
+.recent-row{display:flex;align-items:center;justify-content:center;gap:10px;font-size:18px;font-weight:600;color:var(--fg)}
+.recent-row input{width:110px;min-height:52px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);padding:6px 10px;font:inherit;font-size:22px;text-align:center}
+.recent-row input:focus{outline:2px solid var(--pri);outline-offset:1px;border-color:var(--pri)}
+.recent-err{margin:0;min-height:1.2em;font-size:14px;color:var(--ng);text-align:center}
 </style>
 </head><body>
 <header class="top"><div class="wrap">
@@ -2897,7 +2904,7 @@ const D = {
 '招呼語與常用句': 'Greetings & phrases', '招呼語': 'Greetings', '助詞・語尾': 'Particle / ending', '助詞': 'Particles',
 '動詞(一類)': 'Verb (group 1)', '動詞(二類)': 'Verb (group 2)', '動詞(三類)': 'Verb (group 3)',
 '未學': 'New', '待考': 'To test', '已學會': 'Learned', '已排除': 'Excluded', '已列入考題': 'Added to quiz', '練習中': 'Practicing', '還沒學': 'Not learned',
-'最近學過': 'Recently learned', '最近學過的範圍': 'Recently learned range', '最近 1 天': 'Last 1 day', '最近 3 天': 'Last 3 days', '最近 7 天': 'Last 7 days',
+'最近學過': 'Recently learned', '自訂天數…': 'Custom days…', '自訂字數…': 'Custom word count…', '自訂天數': 'Custom days', '自訂字數': 'Custom word count', '出最近幾天內開始學的字。': 'Words you started learning in the last few days.', '出最近開始學的幾個字。': 'The words you started learning most recently.', '最近': 'Last', '個字': 'words', '天數': 'Days', '字數': 'Words', '確定': 'OK', '字卡最近學過': 'Cards: recently learned', '最近學過的範圍': 'Recently learned range', '最近 1 天': 'Last 1 day', '最近 3 天': 'Last 3 days', '最近 7 天': 'Last 7 days',
 '最近 10 個字': 'Last 10 words', '最近 20 個字': 'Last 20 words', '最近 30 個字': 'Last 30 words', '最近 50 個字': 'Last 50 words',
 '錯題': 'Mistakes', '錯題複習': 'Mistake review', '錯題複習中': 'Reviewing mistakes', '到期複習': 'Due review', '單選錯題': 'Choice mistakes', '填空錯題': 'Fill-in mistakes',
 '單選錯題複習': 'Choice mistake review', '填空錯題複習': 'Fill-in mistake review', '單選複習': 'Choice review', '填空複習': 'Fill-in review', '複習已學會': 'Review learned',
@@ -3239,7 +3246,7 @@ R(/^看「(.+)」的詞性和變化形$/, 'Part of speech and forms of “$1”'
 R(/^目前只顯示「(.+)」，可以改選「全部」。$/, (m, a) => `Only showing “${t(a)}”. You can switch to “All”.`);
 R(/^「(.+)」範圍內還沒有學過的字。可以在上方把範圍調大，或先到字卡把字列入考題。$/, (m, a) => `No words learned in “${t(a)}”. Widen the range above, or add words to your quiz from Cards.`);
 R(/^已標記為學會，(\d+) 天後會再考一次$/, 'Marked as learned — it will come back in $1 days');
-R(/^到期複習：每天最多 (\d+) 個$/, 'Due reviews: up to $1 a day'); R(/^到期複習：不限$/, 'Due reviews: no limit'); R(/^開（每做 (\d+)～(\d+) 題）$/, 'On (every $1–$2 questions)');
+R(/^到期複習：每天最多 (\d+) 個$/, 'Due reviews: up to $1 a day'); R(/^到期複習：不限$/, 'Due reviews: no limit'); R(/^開（每做 (\d+)～(\d+) 題）$/, 'On (every $1–$2 questions)'); R(/^開（每做 (\d+)～(\d+) 題，單選不算）$/, 'On (every $1–$2 questions; multiple choice doesn’t count)');
 R(/^連勝 (\d+) 天！$/, '$1-day streak!'); R(/^今天的 (\d+) 題完成了！連勝 (\d+) 天$/, "Today's $1 done! $2-day streak"); R(/^最長紀錄 (\d+) 天$/, 'Longest: $1 days');
 R(/^今天已經練了 (\d+) 題，連勝保住了。$/, "You've done $1 today — streak kept."); R(/^今天再做 (\d+) 題就能延續連勝。$/, 'Do $1 more today to keep your streak.'); R(/^今天做 (\d+) 題就開始連勝。$/, 'Do $1 today to start a streak.');
 R(/^休息日：這週已經用過（(.+?)），(.+?) 以後才能再休息$/, 'Rest day: already used this week ($1); next one available from $2');
@@ -3251,6 +3258,8 @@ R(/^一天做 (\d+) 題就算有練：填空、聽寫、五十音、發音、文
 R(/^第 (\d+) 題／共 (\d+) 題$/, 'Question $1 of $2'); R(/^這一組答對 (\d+)／(\d+) 題$/, '$1 of $2 correct in this set');
 R(/^你已經 (\d+) 天沒來練習了，看看還記不記得這些字。$/, "You haven't practiced for $1 days. Do you still remember these words?");
 R(/^每做 (\d+)～(\d+) 題（每次不一定），或隔了 (\d+) 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。$/, "Every $1–$2 questions (it varies), or when you haven't opened the app for $3+ days, a set of three questions on words you've studied pops up: two multiple-choice (Japanese words with kanji test the reading) and one fill-in."); R(/^(\d+) 個$/, '$1 words');
+R(/^每做 (\d+)～(\d+) 題（每次不一定；單選不算，填空、聽寫等才算），或隔了 (\d+) 天以上沒打開，會跳出一組三題考你學過的字：兩題選擇（日文有漢字的字會考讀音）、一題填空。$/, "Every $1–$2 questions (it varies; multiple choice doesn't count, fill-in, dictation and the like do), or when you haven't opened the app for $3+ days, a set of three questions on words you've studied pops up: two multiple-choice (Japanese words with kanji test the reading) and one fill-in.");
+R(/^最近 (\d+) 天$/, (m, n) => n === '1' ? 'Last 1 day' : `Last ${n} days`); R(/^最近 (\d+) 個字$/, 'Last $1 words'); R(/^請填 1～(\d+) 的整數$/, 'Enter a whole number from 1 to $1');
 R(/^已學會，明天（(.+)）會出現在到期複習。$/, 'Learned! It will be in due review tomorrow ($1).');
 R(/^下次複習：(.+)$/, 'Next review: $1');
 R(/^已學會 (\d+)\/(\d+)$/, 'Learned $1/$2');
@@ -5804,22 +5813,71 @@ function tickProg(host) {
 }
 const REVIEW_ROUND = 10;
 const roundSize = () => SET.round === 'all' ? 100000 : (Number(SET.round) || 20);
-// 「最近學過」的範圍：d1 = 最近 1 天，c20 = 最近學過的 20 個字
-const RECENT_OPTS = [['d1', '最近 1 天'], ['d3', '最近 3 天'], ['d7', '最近 7 天'], ['c10', '最近 10 個字'], ['c20', '最近 20 個字'], ['c30', '最近 30 個字'], ['c50', '最近 50 個字']];
-function recentLabel() { return (RECENT_OPTS.find(x => x[0] === SET.recent) || RECENT_OPTS[0])[1]; }
+// @include shared/recent.js（「最近學過」的範圍；這一段由 build.js 從 n5src/shared/recent.js 複製過來，要改請改那個檔再跑 build.js）
+// ================= 「最近學過」的範圍（日文頁和語言頁共用：n5src/shared/recent.js） =================
+// build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
+// SET.recent：d<N> = 最近 N 天學過的字，c<N> = 最近學過的 N 個字（開始學的時間 q，舊紀錄用 t）。
+// 除了預設的幾個，也可以自己填天數或字數（選單裡的「自訂天數…」「自訂字數…」會打開 recentAsk 的面板）。
+// 字卡、單選、填空（日文還有聽寫）共用同一個範圍。
+const RECENT_PRESETS = [['d1', 1], ['d3', 3], ['d7', 7], ['c10', 10], ['c20', 20], ['c30', 30], ['c50', 50]].map(([k, n]) => [k, recentName(k[0], n)]);
+const RECENT_MAX = { d: 365, c: 999 };
+function recentName(u, n) { return u === 'd' ? `最近 ${n} 天` : `最近 ${n} 個字`; }
+// 目前的範圍 [單位, 數字]；格式不對就當成最近 1 天
+function recentVal(v = SET.recent) {
+  const m = /^([dc])(\d+)$/.exec(v || '');
+  if (!m) return ['d', 1];
+  return [m[1], Math.min(RECENT_MAX[m[1]], Math.max(1, +m[2]))];
+}
+function recentLabel() { const [u, n] = recentVal(); return recentName(u, n); }
+// 選單的選項：預設的幾個＋目前自己填的（排在同單位、數字的位置）＋兩個「自訂」
+function recentOpts() {
+  const [u, n] = recentVal(), cur = u + n;
+  const list = RECENT_PRESETS.slice();
+  if (!list.some(x => x[0] === cur)) list.push([cur, recentName(u, n)]);
+  list.sort((a, b) => a[0][0] !== b[0][0] ? (a[0][0] === 'd' ? -1 : 1) : +a[0].slice(1) - +b[0].slice(1));
+  return [...list, ['+d', '自訂天數…'], ['+c', '自訂字數…']];
+}
+const recentT = id => { const r = getRec(id); return r.q || r.t || 0; };
 function recentIds() {
-  const v = SET.recent || 'd1', n = parseInt(v.slice(1), 10) || 1;
+  const [u, n] = recentVal();
   const cand = WORDS.filter(w => { const r = getRec(w.id); return (r.s === 'queued' || r.s === 'learned') && recentT(w.id) > 0; });
-  if (v[0] === 'c') return new Set(cand.sort((a, b) => recentT(b.id) - recentT(a.id)).slice(0, n).map(w => w.id));
+  if (u === 'c') return new Set(cand.sort((a, b) => recentT(b.id) - recentT(a.id)).slice(0, n).map(w => w.id));
   const since = Date.now() - n * 864e5;
   return new Set(cand.filter(w => recentT(w.id) >= since).map(w => w.id));
 }
-const recentT = id => { const r = getRec(id); return r.q || r.t || 0; };
+// 換了範圍：存起來，重新出題
+function recentSet(v, after) { SET.recent = v; saveSet(); mcRound = null; fillRound = null; deck = null; if (after) after(); }
+// 自己填天數（u = 'd'）或字數（u = 'c'）的面板；填好按「確定」才會換
+function recentAsk(u, after) {
+  const [cu, cn] = recentVal(), max = RECENT_MAX[u], unit = u === 'd' ? '天' : '個字';
+  const el = Sheet.open(u === 'd' ? '自訂天數' : '自訂字數', `<form id="recentForm" class="recent-form" novalidate>
+      <p class="meta">${u === 'd' ? '出最近幾天內開始學的字。' : '出最近開始學的幾個字。'}</p>
+      <label class="recent-row" for="recentN"><span>最近</span><input id="recentN" type="number" inputmode="numeric" pattern="[0-9]*" min="1" max="${max}" step="1" value="${cu === u ? cn : u === 'd' ? 14 : 100}" aria-label="${u === 'd' ? '天數' : '字數'}"><span>${unit}</span></label>
+      <p class="recent-err" id="recentErr" role="alert"></p>
+      <button class="btn solid block" type="submit">確定</button>
+    </form>`, u === 'd' ? '自訂天數' : '自訂字數');
+  const inp = $('#recentN', el), err = $('#recentErr', el);
+  setTimeout(() => { inp.focus(); inp.select(); }, 60);
+  $('#recentForm', el).onsubmit = e => {
+    e.preventDefault();
+    const s = String(inp.value).trim(), n = Number(s);
+    if (!/^\d+$/.test(s) || n < 1 || n > max) { err.textContent = `請填 1～${max} 的整數`; inp.focus(); return; }
+    Sheet.close(); recentSet(u + n, after); toast(`最近學過：${recentName(u, n)}`);
+  };
+}
+// 選單變了：選「自訂…」就打開面板（選單先跳回原本的值，按確定才換），其他直接換
+function recentChange(sel, after) {
+  const v = sel.value;
+  if (v[0] !== '+') return recentSet(v, after);
+  sel.value = recentVal().join('');
+  setTimeout(() => recentAsk(v[1], after), 200);   // 等選單面板收起來
+}
+function recentCtl(onChange) { return { html: pillSelect('recentSel', '最近學過的範圍', recentOpts(), recentVal().join('')), bind: host => { const rs = $('#recentSel', host); if (rs) rs.onchange = () => recentChange(rs, onChange); } }; }
+// @end shared/recent.js
 // 「最近學過」不套用詞性篩選（篩選器在這個來源被範圍選單取代）
 const srcPool = src => src === 'recent' ? wordPool('recent') : filtered(src);
 // 「最近學過」的範圍本身就是要複習的量，一輪就出完範圍內的全部字
 const recentQueue = pool => shuffle(pool.slice());
-function recentCtl(onChange) { return { html: pillSelect('recentSel', '最近學過的範圍', RECENT_OPTS, SET.recent), bind: host => { const rs = $('#recentSel', host); if (rs) rs.onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; deck = null; onChange(); }; } }; }
 
 // ================= 五十音 =================
 let kanaRound = null;
@@ -6948,7 +7006,7 @@ function renderLib() {
           <label class="label" for="roundSel">每輪題數</label>
           <select id="roundSel">${[10, 15, 20, 30, 50, 'all'].map(n => `<option value="${n}"${String(SET.round) === String(n) || (n === 20 && !SET.round) ? ' selected' : ''}>${n === 'all' ? '全部' : n + ' 題'}</option>`).join('')}</select>
           <label class="label" for="recentSet">「最近學過」的範圍</label>
-          <select id="recentSet">${RECENT_OPTS.map(([k, l]) => `<option value="${k}"${SET.recent === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
+          <select id="recentSet">${recentOpts().map(([k, l]) => `<option value="${k}"${recentVal().join('') === k ? ' selected' : ''}>${l}</option>`).join('')}</select>
           <label class="label" for="hintSel">填空的提示（第一個${P.hintUnit}、${P.hintUnit}數）</label>
           <select id="hintSel"><option value="tap"${SET.fillHint !== 'show' ? ' selected' : ''}>按「提示」才顯示</option><option value="show"${SET.fillHint === 'show' ? ' selected' : ''}>一開始就顯示</option></select>
           <div class="meta">每輪題數會套用到${P.roundTabs}。「最近學過」一輪會出完範圍內的全部字；錯題複習每輪 10 題，從以前錯過的字輪流抽，抽過的要等其他字都出過才會再出現。</div>
@@ -7004,7 +7062,7 @@ function renderLib() {
   $('#vtipSel').onchange = e => { SET.vtip = e.target.value; saveSet(); toast(SET.vtip === 'off' ? '動詞變化：不顯示' : '動詞變化：顯示'); };
   $('#popSel').onchange = e => { SET.pop = e.target.value; saveSet(); toast(SET.pop === 'off' ? '突擊測驗：關閉' : '突擊測驗：開'); };
   $('#hintSel').onchange = e => { SET.fillHint = e.target.value; saveSet(); fillRound = null; toast(SET.fillHint === 'show' ? '填空提示：一開始就顯示' : '填空提示：按了才顯示'); };
-  $('#recentSet').onchange = e => { SET.recent = e.target.value; saveSet(); mcRound = null; fillRound = null; deck = null; toast(`最近學過：${recentLabel()}`); renderLib(); };
+  $('#recentSet').onchange = e => { const custom = e.target.value[0] === '+'; recentChange(e.target, renderLib); if (!custom) toast(`最近學過：${recentLabel()}`); };
   $('#vibSel').onchange = e => { SET.vib = e.target.value; saveSet(); buzz(true); };
   $('#vibTest').onclick = testBuzz;
   $('#sfxSel').onchange = e => { SET.sfx = e.target.value; saveSet(); if (SET.sfx !== 'off') Sfx.ok(); };
