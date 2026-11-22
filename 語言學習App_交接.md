@@ -36,7 +36,7 @@
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v125'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v126'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 
@@ -75,7 +75,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
   - `shared/mc-tab.js`：單選分頁的回合管理（mcRound、MC_SRCS、renderMC、nextMCQ）、三種基本題型（看單字選意思、看意思選單字、聽發音選意思），和 emptyWords（沒有題目時的提示，單選、填空、聽寫共用）。一輪的設定用 `PAGE.mc.roundKey()` 判斷（設定變了就重新出題）。特殊題型留在各頁：日文的漢字讀音（nextReadQ）、助詞（nextPartQ）、詞性變化（nextConjQ），語言頁的冠詞／格與性別、介係詞練習句、動詞變化（在 PAGE.mc.question 和 special 裡）。日文頁換日→中／中→日／聽→中會接著同一輪（resetOnMode: false），語言頁換題型會重新出題。
   - `shared/gram-tab.js`：文法關卡（gxKey、gxNeed、gxStages、gxNext、gxRecord、gxPathHTML、gxWhere）、練習題流程（startGxQuiz）、文法點頁（renderGramPoint：說明／看範例／練習題、例句卡片）、openGram 和 data-gram 的點擊。文法列表、變化規則頁、範例拆解（gxExamplesHTML）還是各頁自己的；一題練習題怎麼畫在 `PAGE.gram.quizQ`。gramPane、gramPaneId、gramShow 由各頁宣告。
   - `shared/sheet.js`：拉起式面板 Sheet（open、close、isOpen）。
-  - `shared/recent.js`：「最近學過」的範圍（預設選項＋自訂天數／字數的面板、recentIds、recentCtl）。
+  - `shared/recent.js`：「最近學過」的範圍（選單＝目前的範圍＋自訂天數／字數的面板、recentIds、recentCtl）。
   - `shared/dict.js`：線上查字典（給 mine.js 的表單用）。
   - `shared/mine.js`：「我的單字」的新增／編輯表單（editMine）。頁面有 `PAGE.mine` 才會出現入口（prefix、lang、name、posOpts、builtin、check、changed）。語言頁和日文頁都有。
   - `shared/tour.js`：首次使用導覽（Tour），各頁的步驟和文字在 `PAGE.tour`。
@@ -134,6 +134,7 @@ n5work/               目前網站上的所有檔案（build.js 的輸出）
 
 ## 最近做過的改動
 
+- **「最近學過」選單只留自訂**（2026-11-22 使用者覺得選項太多）：範圍選單只剩三項：目前的範圍（例如「最近 50 個字」）、「自訂天數…」、「自訂字數…」，預設的 1／3／7 天、10／20／30／50 個字拿掉了（`recentOpts`）。預設值還是最近 1 天，舊設定照用。
 - **「最近學過」可以自己填天數或字數**（全部語言，2026-11-22 使用者要求）：範圍選單（字卡、單選、填空、日文聽寫上方，和設定頁的「最近學過的範圍」）最後多了「自訂天數…」「自訂字數…」，選了會拉起面板填數字（天數 1～365、字數 1～999，`RECENT_MAX`），按「確定」才換；按叉叉不變。填過的值會出現在選單裡（例如「最近 5 天」，排在同單位的預設之間）。`SET.recent` 格式不變（d<N>／c<N>），舊設定照用。
   - 程式整理到新的 `n5src/shared/recent.js`（recentVal、recentLabel、recentOpts、recentIds、recentT、recentSet、recentAsk、recentChange、recentCtl），日文頁 ja/app.js 和 lang-app.js 原本各寫一份的都拿掉了，改用 include。樣式 base.css 的 `.recent-form`；English 在 i18n-ui.js（也補上「單選不算」的兩句設定文字）。
   - 測試：card-recent-e2e.js 加了自訂字數／天數、填 0 會提示、按叉叉不換、設定頁也能自訂。
