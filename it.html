@@ -6525,9 +6525,8 @@ const roundSize = () => SET.round === 'all' ? 100000 : (Number(SET.round) || 20)
 // ================= 「最近學過」的範圍（日文頁和語言頁共用：n5src/shared/recent.js） =================
 // build.js 會把這個檔複製進兩邊的頁面（見 lib-tab.js 開頭的說明）。
 // SET.recent：d<N> = 最近 N 天學過的字，c<N> = 最近學過的 N 個字（開始學的時間 q，舊紀錄用 t）。
-// 除了預設的幾個，也可以自己填天數或字數（選單裡的「自訂天數…」「自訂字數…」會打開 recentAsk 的面板）。
+// 選單只有三項：目前的範圍、「自訂天數…」「自訂字數…」（打開 recentAsk 的面板自己填數字）。預設是最近 1 天。
 // 字卡、單選、填空（日文還有聽寫）共用同一個範圍。
-const RECENT_PRESETS = [['d1', 1], ['d3', 3], ['d7', 7], ['c10', 10], ['c20', 20], ['c30', 30], ['c50', 50]].map(([k, n]) => [k, recentName(k[0], n)]);
 const RECENT_MAX = { d: 365, c: 999 };
 function recentName(u, n) { return u === 'd' ? `最近 ${n} 天` : `最近 ${n} 個字`; }
 // 目前的範圍 [單位, 數字]；格式不對就當成最近 1 天
@@ -6537,14 +6536,8 @@ function recentVal(v = SET.recent) {
   return [m[1], Math.min(RECENT_MAX[m[1]], Math.max(1, +m[2]))];
 }
 function recentLabel() { const [u, n] = recentVal(); return recentName(u, n); }
-// 選單的選項：預設的幾個＋目前自己填的（排在同單位、數字的位置）＋兩個「自訂」
-function recentOpts() {
-  const [u, n] = recentVal(), cur = u + n;
-  const list = RECENT_PRESETS.slice();
-  if (!list.some(x => x[0] === cur)) list.push([cur, recentName(u, n)]);
-  list.sort((a, b) => a[0][0] !== b[0][0] ? (a[0][0] === 'd' ? -1 : 1) : +a[0].slice(1) - +b[0].slice(1));
-  return [...list, ['+d', '自訂天數…'], ['+c', '自訂字數…']];
-}
+// 選單的選項：目前的範圍＋兩個「自訂」
+function recentOpts() { const [u, n] = recentVal(); return [[u + n, recentName(u, n)], ['+d', '自訂天數…'], ['+c', '自訂字數…']]; }
 const recentT = id => { const r = getRec(id); return r.q || r.t || 0; };
 function recentIds() {
   const [u, n] = recentVal();
