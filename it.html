@@ -614,6 +614,9 @@ body.hide-furi #gloss rt,body.hide-furi .furibtn rt{visibility:visible}
 .lst-chips{margin:0 12px;padding:4px 2px 12px;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 16px),transparent);mask-image:linear-gradient(90deg,transparent 0,#000 12px,#000 calc(100% - 16px),transparent);scroll-padding:0 12px}
 .lst-chips .chip:first-child{margin-left:6px}
 .lst-chips .chip:last-child{margin-right:10px}
+/* 錯題清單的「全部／單選／填空」 */
+.lst-sub{margin:-4px 14px 0;padding:0 0 12px}
+.lst-sub .chip{min-height:34px;font-size:13px;padding:0 12px}
 
 /* 漢字讀音、助詞填空 */
 .read-q{font-size:56px;letter-spacing:.04em}
@@ -3397,7 +3400,7 @@ const D = {
 '未學': 'New', '待考': 'To test', '已學會': 'Learned', '已排除': 'Excluded', '已列入考題': 'Added to quiz', '練習中': 'Practicing', '還沒學': 'Not learned',
 '最近學過': 'Recently learned', '請填 1 以上的整數': 'Enter a whole number of 1 or more', '今天學過': 'Learned today', '昨天學過': 'Learned yesterday', '自訂天數…': 'Custom days…', '自訂字數…': 'Custom word count…', '自訂天數': 'Custom days', '自訂字數': 'Custom word count', '出最近幾天內開始學的字。': 'Words you started learning in the last few days.', '出最近開始學的幾個字。': 'The words you started learning most recently.', '最近': 'Last', '個字': 'words', '天數': 'Days', '字數': 'Words', '確定': 'OK', '字卡最近學過': 'Cards: recently learned', '最近學過的範圍': 'Recently learned range', '最近 1 天': 'Last 1 day', '最近 3 天': 'Last 3 days', '最近 7 天': 'Last 7 days',
 '最近 10 個字': 'Last 10 words', '最近 20 個字': 'Last 20 words', '最近 30 個字': 'Last 30 words', '最近 50 個字': 'Last 50 words',
-'錯題': 'Mistakes', '錯題複習': 'Mistake review', '錯題複習中': 'Reviewing mistakes', '到期複習': 'Due review', '單選錯題': 'Choice mistakes', '填空錯題': 'Fill-in mistakes',
+'錯題': 'Mistakes', '錯題種類': 'Mistake type', '單選・填空': 'Choice · Fill-in', '錯題複習': 'Mistake review', '錯題複習中': 'Reviewing mistakes', '到期複習': 'Due review', '單選錯題': 'Choice mistakes', '填空錯題': 'Fill-in mistakes',
 '單選錯題複習': 'Choice mistake review', '填空錯題複習': 'Fill-in mistake review', '單選複習': 'Choice review', '填空複習': 'Fill-in review', '複習已學會': 'Review learned',
 '新字': 'New words', '單選最近學過': 'Choice: recently learned', '填空最近學過': 'Fill-in: recently learned', '複習單選': 'Review with choice', '複習字卡': 'Review with cards',
 '今天到期': 'Due today', '開': 'On', '關': 'Off', '小聲': 'Quiet',
@@ -6820,7 +6823,7 @@ let mcRound = null;
 const MC_SRCS = [['learn', '待考'], ['recent', '最近學過'], ['mcWrong', '單選錯題'], ['mcReview', '錯題複習'], ['learned', '複習已學會']];
 // 隨機抽的來源（錯題複習、複習已學會；五十音的錯題複習是 'review'）：題目是從一大堆裡輪流或隨機抽的，
 // 選單和題目上方都不顯示題數（使用者要求）。單選、填空、字卡、聽寫、五十音共用。
-const RANDOM_SRCS = ['mcReview', 'fillReview', 'learned', 'review'];
+const RANDOM_SRCS = ['mcReview', 'fillReview', 'wrongReview', 'learned', 'review'];
 const srcText = (k, l, n) => RANDOM_SRCS.includes(k) ? l : `${l} ${n}`;
 function renderMC() {
   const P = PAGE.mc;
@@ -6924,32 +6927,54 @@ function formsLine(w) {
 //   word(w) 單字那一行（日文：振り仮名＋羅馬拼音；語言頁：單字，太長會縮小）、
 //   afterMean(w) 意思下面（語言頁：變化形）、bind(host) 綁定上面這些的按鈕
 // 左上角也會顯示這個字幾天前開始學的（learnedAgo，shared/recent.js；新字不顯示）
+// 錯題：單選和填空的錯題合在「錯題」「錯題複習」兩個來源，選了之後「詞性」那格換成「全部／單選／填空」（UI.wrongKind，單字庫的清單也共用）
 let deck = null;
-const CARD_SRCS = [['new', '新字'], ['queued', '待考'], ['recent', '最近學過'], ['mcWrong', '單選錯題'], ['fillWrong', '填空錯題'], ['mcReview', '單選錯題複習'], ['fillReview', '填空錯題複習'], ['learned', '複習已學會']];
+const CARD_SRCS = [['new', '新字'], ['queued', '待考'], ['recent', '最近學過'], ['wrong', '錯題'], ['wrongReview', '錯題複習'], ['learned', '複習已學會']];
+const WRONG_KINDS = [['all', '全部'], ['mc', '單選'], ['fill', '填空']];
+const wrongKind = () => (UI.wrongKind === 'mc' || UI.wrongKind === 'fill') ? UI.wrongKind : 'all';
+// lv：1＝錯題、2＝錯題複習
+function wrongPool(lv, kind = wrongKind()) { return WORDS.filter(w => kind === 'all' ? (wrongOf(w.id, 'mc') === lv || wrongOf(w.id, 'fill') === lv) : wrongOf(w.id, kind) === lv); }
+const isWrongSrc = k => k === 'wrong' || k === 'wrongReview';
+const cardPool = (k, kind = wrongKind()) => k === 'wrong' ? wrongPool(1, kind) : k === 'wrongReview' ? wrongPool(2, kind) : srcPool(k);
+// 來源選單上的數字：錯題算單選和填空合起來的
+const cardCount = k => cardPool(k, 'all').length;
+// 以前分開的四個來源（存在 UI.cardSrc 裡的舊值）改成合併後的來源＋種類
+const OLD_WRONG_SRCS = { mcWrong: ['wrong', 'mc'], fillWrong: ['wrong', 'fill'], mcReview: ['wrongReview', 'mc'], fillReview: ['wrongReview', 'fill'] };
+function wrongKindCtl(lv, onChange) {
+  const opts = WRONG_KINDS.map(([k, l]) => [k, `${l} ${wrongPool(lv, k).length}`]);
+  return { html: pillSelect('wrongKind', '錯題種類', opts, wrongKind()), bind: host => { const s = $('#wrongKind', host); if (s) s.onchange = () => { UI.wrongKind = s.value; saveUI(); onChange(); }; } };
+}
 function renderCard() {
   const host = $('#tab-card');
   Quiz.active = null;
-  const counts = Object.fromEntries(CARD_SRCS.map(([k]) => [k, srcPool(k).length]));
-  const isRecent = UI.cardSrc === 'recent';
+  if (OLD_WRONG_SRCS[UI.cardSrc]) { [UI.cardSrc, UI.wrongKind] = OLD_WRONG_SRCS[UI.cardSrc]; saveUI(); }
+  if (!CARD_SRCS.some(x => x[0] === UI.cardSrc)) UI.cardSrc = 'new';
+  const counts = Object.fromEntries(CARD_SRCS.map(([k]) => [k, cardCount(k)]));
+  const isRecent = UI.cardSrc === 'recent', isWrong = isWrongSrc(UI.cardSrc);
   // 「最近學過」和單選、填空一樣：不看詞性，改顯示範圍選單（最近幾天／最近幾個字），一疊就是範圍內的全部字
+  // 錯題、錯題複習：不看詞性，改顯示「全部／單選／填空」
+  const redo = () => { deck = null; renderCard(); };
+  const kindCtl = wrongKindCtl(UI.cardSrc === 'wrongReview' ? 2 : 1, redo);
   host.innerHTML = `
-    <div class="ctl">${pillSelect('cardSrc', '字卡來源', CARD_SRCS.map(([k, l]) => [k, srcText(k, l, counts[k])]), UI.cardSrc)}${isRecent ? recentCtl().html : posChips()}</div>
+    <div class="ctl">${pillSelect('cardSrc', '字卡來源', CARD_SRCS.map(([k, l]) => [k, srcText(k, l, counts[k])]), UI.cardSrc)}${isRecent ? recentCtl().html : isWrong ? kindCtl.html : posChips()}</div>
     <div id="fcHost"></div>`;
-  $('#cardSrc', host).onchange = e => { UI.cardSrc = e.target.value; saveUI(); deck = null; renderCard(); };
-  bindPos(host, () => { deck = null; renderCard(); });
-  recentCtl(() => { deck = null; renderCard(); }).bind(host);
-  const valid = deck && deck.src === UI.cardSrc && (isRecent || deck.pos === UI.pos);
+  $('#cardSrc', host).onchange = e => { UI.cardSrc = e.target.value; saveUI(); redo(); };
+  bindPos(host, redo);
+  recentCtl(redo).bind(host);
+  kindCtl.bind(host);
+  const valid = deck && deck.src === UI.cardSrc && (isRecent || (isWrong ? deck.kind === wrongKind() : deck.pos === UI.pos));
   if (!valid || !deck.cards.length) {
-    const pool = srcPool(UI.cardSrc);
+    const pool = cardPool(UI.cardSrc);
     if (!pool.length) {
-      const msg = { new: '這個分類的新字都看過了。', queued: '還沒有待考的字。', recent: `「${esc(recentLabel())}」範圍內還沒有學過的字。可以在上方把範圍調大，或先看新字、列入考題。` }[UI.cardSrc] || '這個分類目前沒有字。';
+      const kl = { all: '', mc: '單選', fill: '填空' }[wrongKind()];
+      const msg = { new: '這個分類的新字都看過了。', queued: '還沒有待考的字。', recent: `「${esc(recentLabel())}」範圍內還沒有學過的字。可以在上方把範圍調大，或先看新字、列入考題。`, wrong: `目前沒有${kl}錯題。`, wrongReview: `目前沒有${kl}錯題複習。` }[UI.cardSrc] || '這個分類目前沒有字。';
       $('#fcHost').innerHTML = `<div class="card empty"><p>${msg}</p>${UI.cardSrc !== 'new' ? '<button class="btn solid" id="toNew">看新字</button>' : ''}</div>`;
       const b = $('#toNew'); if (b) b.onclick = () => { UI.cardSrc = 'new'; saveUI(); deck = null; renderCard(); };
       return;
     }
-    const isRev = /Review$/.test(UI.cardSrc);
-    const cards = UI.cardSrc === 'new' ? pool.slice(0, roundSize()) : isRecent ? shuffle(pool.slice()) : pickRound(pool, getRec, /^fill/.test(UI.cardSrc) ? 'fill' : 'mc', isRev ? REVIEW_ROUND : roundSize(), isRev);
-    deck = { src: UI.cardSrc, pos: UI.pos, cards, total: pool.length };
+    const isRev = UI.cardSrc === 'wrongReview';
+    const cards = UI.cardSrc === 'new' ? pool.slice(0, roundSize()) : isRecent ? shuffle(pool.slice()) : pickRound(pool, getRec, wrongKind() === 'fill' ? 'fill' : 'mc', isRev ? REVIEW_ROUND : roundSize(), isRev);
+    deck = { src: UI.cardSrc, pos: UI.pos, kind: wrongKind(), cards, total: pool.length };
   }
   showFlash();
 }
@@ -6963,7 +6988,7 @@ function showFlash() {
   }
   const w = deck.cards[0];
   const r = getRec(w.id);
-  const isWrong = /Wrong|Review/.test(deck.src);
+  const isWrong = isWrongSrc(deck.src);
   const tags = [];
   if (r.w && r.w.mc) tags.push(`單選${r.w.mc === 1 ? '答錯' : '錯題複習中'}`);
   if (r.w && r.w.fill) tags.push(`填空${r.w.fill === 1 ? '答錯' : '錯題複習中'}`);
@@ -6993,7 +7018,7 @@ function showFlash() {
 }
 function updateCardCounts() {
   const sel = $('#cardSrc'); if (!sel) return;
-  [...sel.options].forEach(o => { const l = CARD_SRCS.find(x => x[0] === o.value); if (l) o.textContent = srcText(o.value, l[1], srcPool(o.value).length); });
+  [...sel.options].forEach(o => { const l = CARD_SRCS.find(x => x[0] === o.value); if (l) o.textContent = srcText(o.value, l[1], cardCount(o.value)); });
 }
 
 // ================= 填空 =================
@@ -7709,7 +7734,7 @@ let libList = 'queued';
 const entryBtn = (tab, src, title, n) => `<button data-go="${tab}:${src}"${n ? '' : ' class="zero"'}><span>${title}</span><b>${n}</b></button>`;
 function libCounts() {
   const t = today(), rset = recentIds();
-  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, recent: 0, mine: 0 };
+  const c = { total: WORDS.length, learned: 0, queued: 0, excluded: 0, due: 0, dueAll: 0, mcW: 0, mcR: 0, fillW: 0, fillR: 0, wrong: 0, wrongR: 0, recent: 0, mine: 0 };
   for (const w of WORDS) {
     const r = getRec(w.id);
     if (r.s === 'learned') { c.learned++; if (r.due && r.due <= t) c.dueAll++; }
@@ -7720,6 +7745,7 @@ function libCounts() {
     const ww = r.w || {};
     if (ww.mc === 1) c.mcW++; if (ww.mc === 2) c.mcR++;
     if (ww.fill === 1) c.fillW++; if (ww.fill === 2) c.fillR++;
+    if (ww.mc === 1 || ww.fill === 1) c.wrong++; if (ww.mc === 2 || ww.fill === 2) c.wrongR++;
   }
   c.due = dueToday().size;
   return c;
@@ -7744,7 +7770,8 @@ function renderLib() {
     ${PAGE.mine ? '<button class="btn quiet block" id="addMine">＋ 新增自己的單字</button>' : ''}
     ${ents.length ? `<div class="entry">${ents.map(x => entryBtn(...x)).join('')}</div>` : '<p class="meta" style="margin:0">目前沒有要複習的題目。練習時答錯的字、到期的字會出現在這裡。</p>'}
     <details class="lst" id="listBox"><summary>清單（待考、已學會、錯題${PAGE.mine ? '、我的單字' : ''}）</summary>
-      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['mcWrong', '單選錯題', c.mcW], ['mcReview', '單選複習', c.mcR], ['fillWrong', '填空錯題', c.fillW], ['fillReview', '填空複習', c.fillR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
+      <div class="chips lst-chips">${[['queued', '待考', c.queued], ['learned', '已學會', c.learned], ['wrong', '錯題', c.wrong], ['wrongReview', '錯題複習', c.wrongR], ['excluded', '已排除', c.excluded]].concat(PAGE.mine ? [['mine', '我的單字', c.mine]] : []).map(([k, l, n]) => `<button class="chip" data-list="${k}" aria-pressed="${libList === k}">${l}<span class="n">${n}</span></button>`).join('')}</div>
+      <div class="chips lst-sub" hidden></div>
       <div class="lrows"></div>
     </details>
     <details class="lst"${Cloud.mode === 'google' && !Cloud.user ? ' open' : ''}><summary>設定<span class="n sync${Cloud.ref ? ' on' : ''}" id="syncState"><i></i><span>${esc(Cloud.chip())}</span></span></summary>
@@ -7854,16 +7881,26 @@ function renderLib() {
     };
   };
 }
+// 錯題、錯題複習：清單上方再分「全部／單選／填空」（和字卡共用 UI.wrongKind）
 function fillList(d) {
-  const key = libList;
-  let arr = wordPool(key);
+  const key = libList, lv = key === 'wrong' ? 1 : key === 'wrongReview' ? 2 : 0;
+  if (OLD_WRONG_SRCS[key]) { [libList, UI.wrongKind] = OLD_WRONG_SRCS[key]; saveUI(); return fillList(d); }
+  const sub = $('.lst-sub', d);
+  sub.hidden = !lv;
+  if (lv) {
+    sub.innerHTML = WRONG_KINDS.map(([k, l]) => `<button class="chip" data-wk="${k}" aria-pressed="${wrongKind() === k}">${l}<span class="n">${wrongPool(lv, k).length}</span></button>`).join('');
+    $$('[data-wk]', sub).forEach(b => b.onclick = () => { UI.wrongKind = b.dataset.wk; saveUI(); deck = null; fillList(d); });
+  }
+  let arr = lv ? wrongPool(lv) : wordPool(key);
   if (key === 'learned') arr = arr.slice().sort((a, b) => (getRec(a.id).due || '').localeCompare(getRec(b.id).due || ''));
   const box = $('.lrows', d);
   if (!arr.length) { box.innerHTML = '<div class="lrow"><span class="z">目前是空的</span></div>'; return; }
-  const act = { queued: '移除', learned: '移回未學', mcWrong: '移除', mcReview: '移除', fillWrong: '移除', fillReview: '移除', excluded: '恢復', mine: '編輯' }[key];
+  const act = { queued: '移除', learned: '移回未學', wrong: '移除', wrongReview: '移除', excluded: '恢復', mine: '編輯' }[key];
+  // 「全部」時標出是哪一種的錯題
+  const kinds = r => [['mc', '單選'], ['fill', '填空']].filter(([m]) => ((r.w || {})[m] || 0) === lv).map(x => x[1]).join('・');
   box.innerHTML = arr.map(w => {
     const r = getRec(w.id);
-    const dd = key === 'learned' ? `<span class="d">${r.due ? r.due.slice(5).replace('-', '/') : ''} · 第${(r.lv || 0) + 1}級</span>` : '';
+    const dd = key === 'learned' ? `<span class="d">${r.due ? r.due.slice(5).replace('-', '/') : ''} · 第${(r.lv || 0) + 1}級</span>` : lv && wrongKind() === 'all' ? `<span class="d">${kinds(r)}</span>` : '';
     return `<div class="lrow">${PAGE.lib.wordCell(w)}<span class="z">${meanW(w)}</span>${dd}<button data-id="${esc(w.id)}">${act}</button></div>`;
   }).join('');
   $$('button[data-id]', box).forEach(b => b.onclick = () => {
@@ -7872,9 +7909,15 @@ function fillList(d) {
     if (key === 'queued') touch(id, { s: 'new' });
     else if (key === 'learned') touch(id, { s: 'new', lv: 0, due: '' });
     else if (key === 'excluded') touch(id, { s: 'new' });
-    else { const w = Object.assign({}, r.w); delete w[/^mc/.test(key) ? 'mc' : 'fill']; touch(id, { w }); }
+    else {
+      // 移除錯題：只移除目前分類的（「全部」就單選、填空都移除）
+      const w = Object.assign({}, r.w);
+      for (const m of wrongKind() === 'all' ? ['mc', 'fill'] : [wrongKind()]) if ((w[m] || 0) === lv) delete w[m];
+      touch(id, { w }); deck = null;
+      $$('[data-wk]', d).forEach(x => { const n = $('.n', x); if (n) n.textContent = wrongPool(lv, x.dataset.wk).length; });
+    }
     b.closest('.lrow').remove();
-    const n = $(`[data-list="${key}"] .n`, d); if (n) n.textContent = Math.max(0, +n.textContent - 1);
+    const n = $(`[data-list="${key}"] .n`, d); if (n) n.textContent = lv ? wrongPool(lv, 'all').length : Math.max(0, +n.textContent - 1);
   });
 }
 // ================= 線上查字典（n5src/shared/dict.js） =================
