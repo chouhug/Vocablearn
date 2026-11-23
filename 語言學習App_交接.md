@@ -32,11 +32,11 @@
 |---|---|
 | index.html | 日語 N5 頁（build.js 用 n5src/ja/ 產生，約 430KB），開頭有 `<script src="lang.js" data-lang="ja">` |
 | it.html / es.html / de.html / ru.html / en.html | 由 build.js 產生的義大利文、西班牙文、德文、俄文、英文頁 |
-| lang.js | 所有頁共用：第一次使用先選語言、語言選單、語言鎖定（最多幾個語言＋自己寫的理由）、記住上次的語言並自動跳轉、換頁用 location.replace（返回鍵不會跳回上個語言）、鍵盤收起時恢復底部分頁、`html{touch-action:manipulation}`（防止連點放大） |
+| lang.js | 所有頁共用：第一次使用先選語言、語言選單、語言鎖定（最多幾個語言＋自己寫的理由）、記住上次的語言並自動跳轉、換頁用 location.replace（返回鍵不會跳回上個語言）、鍵盤收起時恢復底部分頁、`html{touch-action:manipulation}`（防止連點放大）；最後一段是「有新版時自動更新」：回到分頁或每 30 分鐘檢查 sw.js，新版接手後分頁在背景就直接重新整理，正在看就在分頁列上方出現「有新版本，點這裡更新」（測試：`node n5src/update-e2e.js n5work`） |
 | core.js | 所有頁共用的資料與複習規則：日期（ymd、today、addDays）、shuffle、SRS、spread、blankRec、applyAnswer、pickRound(items, getRec, mode, size, randomOnly)、mergeState、備份碼（packState、unpackState、zipCode、unzipCode）。都是全域函式，日文頁和 lang-app.js 直接用，**改規則只改這裡**。測試：`node n5src/core-test.js n5work` |
 | ui.js | 所有頁共用的介面零件：esc、store、ICON、playBtn、iconPlay、verdict(ok, extra, warn)、toast、pillSelect、Sfx（音效）、buzz／testBuzz（震動）、Picker（下拉選單面板）、滑動開關動畫。放在 `<body>` 裡、主程式前面載入；頁面用 `UIKit.bind({ SET, t })` 接上設定（音效 sfx、震動 vib）和介面翻譯（日文頁傳 L，語言頁不傳） |
 | sync.js | 所有頁共用的雲端同步（`makeCloud(hooks)`，各頁用 `const Cloud = makeCloud({...})` 建立）。index.html 和 lang-template.html 都在 Firebase 程式庫後面載入 |
-| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v127'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
+| sw.js | 離線快取。自己網站的檔案「網路優先、3 秒逾時用快取」；字體和 Firebase 程式庫「快取優先」。目前 `CACHE = 'n5-v128'`（CORE 含 sync.js、core.js、ui.js、apple-touch-icon.png） |
 | manifest.json | 名稱「Langgern」（原「Vocablearn」、「語言學習」），`id: ./index.html`（和 start_url 一樣，改了會被當成另一個 App）；圖示 any 和 maskable 分開寫（圖案在安全區內，同一張圖可以兩用） |
 | icon-192.png、icon-512.png、apple-touch-icon.png | 藍底＋白色對話框「A」＋黃色對話框「文」 |
 

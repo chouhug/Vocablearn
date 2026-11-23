@@ -290,3 +290,39 @@
   // welcome：還在等使用者選語言；afterWelcome(fn)：選好（而且留在這一頁）之後再做（例如開始導覽）
   window.AppLangs = { open: openPicker, current: CUR, list: LANGS, stats(fn) { statFn = fn; saveStat(); }, welcome: WELCOME, afterWelcome(fn) { if (this.welcome) waiting.push(fn); else fn(); } };
 })();
+
+/* 有新版時自動更新
+   電腦的分頁常常開著好幾天都沒重新整理，就一直停在舊版（手機 App 每次打開都會重新載入，所以比較少遇到）。
+   - 回到這個分頁、或每 30 分鐘：請瀏覽器檢查 sw.js 有沒有變（有變＝網站有新版）
+   - 新版的 sw.js 接手後：分頁在背景就直接重新整理；正在看的話，下方（分頁列上面）出現「有新版本」的按鈕，按了才重新整理（不打斷正在做的題目） */
+(function () {
+  'use strict';
+  const sw = navigator.serviceWorker;
+  if (!sw) return;
+  let had = !!sw.controller, waiting = false, done = false;
+  const reload = () => { if (done) return; done = true; location.reload(); };
+  const check = () => { sw.getRegistration().then(r => r && r.update()).catch(() => {}); };
+  const bar = () => {
+    if (document.getElementById('appUpdate')) return;
+    const en = document.documentElement.lang === 'en';
+    const b = document.createElement('button');
+    b.id = 'appUpdate'; b.type = 'button'; b.setAttribute('data-noi18n', '');
+    b.textContent = en ? 'New version available — tap to update' : '有新版本，點這裡更新';
+    b.style.cssText = 'position:fixed;left:50%;bottom:calc(var(--tabh,62px) + env(safe-area-inset-bottom,0px) + 12px);transform:translateX(-50%);z-index:9999;' +
+      'padding:10px 18px;border-radius:999px;border:0;background:var(--pri,#1d4e96);color:var(--pri-ink,#fff);' +
+      'font:600 15px var(--font-ui,system-ui,sans-serif);box-shadow:0 4px 14px rgba(0,0,0,.25);cursor:pointer;max-width:calc(100vw - 24px)';
+    b.addEventListener('click', reload);
+    (document.body || document.documentElement).appendChild(b);
+  };
+  sw.addEventListener('controllerchange', () => {
+    if (!had) { had = true; return; }   // 第一次安裝，不是更新
+    waiting = true;
+    if (document.hidden) reload(); else bar();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { if (waiting) reload(); }
+    else check();
+  });
+  setInterval(() => { if (!document.hidden) check(); }, 30 * 60 * 1000);
+  window.AppUpdate = { check };
+})();
