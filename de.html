@@ -7460,6 +7460,7 @@ function fillQuestion(host, w, R, src, next, keepFocus) {
       ${exampleBlock(w)}
     </div>`;
     if (q.after) q.after(ok);
+    fillKeepKeys(inp);
   };
   $('#fillForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -7473,13 +7474,38 @@ function fillQuestion(host, w, R, src, next, keepFocus) {
   $('#fillShow').onclick = () => { if (!answered) finish('wrong', true); };
   inp.addEventListener('focus', () => { document.body.classList.add('typing'); setTimeout(scrollFillTop, 280); });
   inp.addEventListener('blur', () => setTimeout(() => { const a = document.activeElement; if (!a || a.id !== 'fillIn') document.body.classList.remove('typing'); }, 250));
-  if (keepFocus && window.matchMedia('(pointer:fine)').matches) inp.focus({ preventScroll: true });
+  if (fineInput()) inp.focus({ preventScroll: true });
   else if (keepFocus && document.body.classList.contains('typing')) { inp.focus({ preventScroll: true }); scrollFillTop(); }
 }
-// 打字時（鍵盤打開）把題目捲到畫面最上面
+// ---- 電腦（有滑鼠和實體鍵盤）：進填空就能直接打字，不用先點框框；答完按 Enter 就下一題 ----
+// 手機不自動對焦（會一直跳出鍵盤）。日文的聽寫（ja/app.js 的 nextDictQ）也用同一個 #fillForm、#fillIn，所以一起適用。
+const fineInput = () => window.matchMedia('(pointer:fine)').matches;
+// 答完（包括按了「看答案」）把焦點放回輸入框，Enter 就是「下一題」
+function fillKeepKeys(inp) { if (fineInput() && inp && inp.isConnected) inp.focus({ preventScroll: true }); }
+document.addEventListener('keydown', e => {
+  if (!fineInput() || e.defaultPrevented || e.isComposing || e.keyCode === 229 || e.ctrlKey || e.metaKey || e.altKey) return;
+  const form = document.getElementById('fillForm'), inp = document.getElementById('fillIn');
+  if (!form || !inp || !form.offsetParent) return;                           // 畫面上沒有填空題
+  if (document.querySelector('.pk:not([hidden])')) return;                    // 選單或面板開著
+  if (typeof Tour !== 'undefined' && Tour.card && !Tour.card.hidden) return;  // 導覽中
+  const a = document.activeElement;
+  if (a === inp) return;                                                      // 已經在框框裡：照原本的方式
+  if (a && (/^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName) || a.isContentEditable)) return;   // 在別的輸入框
+  if (e.key === 'Enter') {
+    // 還沒作答時，焦點在按鈕上（例如「提示」）就照按鈕原本的動作；答完了 Enter 一律下一題
+    if (!inp.readOnly && a && a.tagName === 'BUTTON') return;
+    e.preventDefault();
+    if (!inp.readOnly) inp.focus({ preventScroll: true });
+    form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event('submit', { cancelable: true }));
+    return;
+  }
+  // 打了字（不是方向鍵、Tab 這些）但焦點不在框框：移到框框，這個字會直接打進去
+  if (e.key.length === 1 && e.key !== ' ' && !inp.readOnly) inp.focus({ preventScroll: true });
+});
+// 打字時（鍵盤打開）把題目捲到畫面最上面；電腦沒有螢幕鍵盤，不用捲
 function scrollFillTop() {
   const card = $('#fillCard');
-  if (!card || !document.body.classList.contains('typing')) return;
+  if (!card || !document.body.classList.contains('typing') || fineInput()) return;
   const y = card.getBoundingClientRect().top + window.scrollY - 6;
   window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
 }
